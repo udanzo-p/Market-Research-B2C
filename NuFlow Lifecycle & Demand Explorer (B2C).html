@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NuFlow Lifecycle & Demand Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a project spec binder. Sticky tab strip, one view at a time, monospace for every figure, evidence tags on every number, a slide-notes button on every section. */
+:root{
+  --bg:#edf0f3; --surface:#fbfcfd; --surface2:#f1f4f6; --ink:#0d1b26; --ink2:#46535e; --muted:#6f7c86; --line:#d5dce2;
+  --accent:#0b4f6c; --accent-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#8a5cd6; --neutral:#9aa6af;
+  --f1:#86b6ef; --f2:#2a78d6; --f3:#104281;
+  --good:#006300; --t-src:#0b4f6c; --t-der:#5b4bb7; --t-ass:#9a5b00; --t-unv:#a13030;
+  --warm:#b45309; --warm-bg:#fff4e6;
+  --font-d:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-b:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --font-m:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1217; --surface:#131b22; --surface2:#19232b; --ink:#e7edf1; --ink2:#b4c0c8; --muted:#8895a0; --line:#27333c;
+  --accent:#7cc8e8; --accent-ink:#06222e;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9b78e8; --neutral:#5b6872;
+  --f1:#86b6ef; --f2:#3987e5; --f3:#1c5cab;
+  --good:#0ca30c; --t-src:#7cc8e8; --t-der:#a99cf2; --t-ass:#e0a23d; --t-unv:#ef8a8a;
+  --warm:#f0a35a; --warm-bg:#2a2016; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 60px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:1140px;margin:0 auto}
+a{color:var(--accent)}
+h1,h2,h3,h4{font-family:var(--font-d);line-height:1.12;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(28px,5vw,46px);font-weight:800}
+h2{font-size:clamp(22px,3vw,30px);font-weight:700}
+h3{font-size:17px;font-weight:700}
+h4{font-size:14px;font-weight:700;color:var(--ink2)}
+p{margin:0}
+.mono,.num{font-family:var(--font-m);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-m);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+/* nav */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px))}
+.bar-in{max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:16px;padding-block:10px}
+.brand{font-family:var(--font-d);font-weight:800;font-size:17px;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.brand i{width:12px;height:12px;border-radius:50% 50% 50% 0;background:var(--s1);display:inline-block;transform:rotate(-45deg)}
+.brand small{font-family:var(--font-m);font-weight:500;font-size:11px;color:var(--muted);margin-left:2px}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0}
+nav::-webkit-scrollbar{display:none}
+nav a{padding:7px 9px;border-radius:6px;text-decoration:none;color:var(--ink2);font-size:13.5px;font-weight:500;white-space:nowrap}
+nav a:hover{background:var(--surface2)}
+nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+nav a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.view{padding-top:30px;display:grid;gap:28px;grid-template-columns:minmax(0,1fr)}
+.g2>*,.g3>*,.g4>*{min-width:0}
+.lead{max-width:64ch;color:var(--ink2);font-size:16.5px}
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.panel.flat{background:transparent;border-style:dashed}
+.panel.warm{background:var(--warm-bg);border-color:var(--warm)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
+.col,.panel,.tw,.grid>*,.steps>*,.step>*{min-width:0;max-width:100%}
+.sec-h{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.sec-h p{color:var(--ink2);max-width:72ch}
+.sec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.sec-top .sec-h{margin-bottom:0;flex:1 1 420px}
+/* tags */
+.tag{font-family:var(--font-m);font-style:normal;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor;border-radius:4px;padding:0 5px;margin-left:7px;white-space:nowrap;vertical-align:middle}
+.tag.src{color:var(--t-src)} .tag.der{color:var(--t-der)} .tag.ass{color:var(--t-ass)} .tag.unv{color:var(--t-unv)}
+/* big numbers */
+.kpi{display:flex;flex-direction:column;gap:4px;padding:18px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.kpi .v{font-family:var(--font-d);font-weight:800;font-size:clamp(28px,4.2vw,42px);line-height:1}
+.kpi .v small{font-size:.42em;font-weight:600;color:var(--muted);margin-left:4px}
+.kpi .l{font-size:13px;color:var(--ink2)}
+.kpi.dark{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.kpi.dark .l{color:var(--bg);opacity:.78}
+.kpi.sm .v{font-size:clamp(22px,3vw,30px)}
+/* hero */
+.hero{display:grid;gap:18px;padding:6px 0 4px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:18px 18px;background-position:-6px -6px;border-radius:10px}
+.hero>*{background:transparent}
+.hero h1{max-width:22ch}
+/* slide bar */
+.slide{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-radius:10px;background:var(--surface2);border:1px dashed var(--line)}
+.slide .eyebrow{display:block;margin-bottom:3px}
+.slide b{font-family:var(--font-d);font-size:16px;font-weight:700}
+.btn{font:600 13px var(--font-b);border:1px solid var(--ink);background:transparent;color:var(--ink);padding:7px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface)}
+.btn.ok{border-color:var(--good);color:var(--good)}
+.copybox{grid-column:1/-1}
+.copybox textarea{width:100%;min-height:150px;font:12.5px/1.45 var(--font-m);border:1px solid var(--line);border-radius:7px;padding:10px;background:var(--surface);color:var(--ink);resize:vertical}
+@media (max-width:560px){.slide{grid-template-columns:1fr}}
+/* lists */
+.finds{display:grid;gap:0;counter-reset:f;border-top:1px solid var(--line);padding:0;margin:0}
+.finds li{list-style:none;display:grid;grid-template-columns:34px 1fr;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
+.finds li::before{counter-increment:f;content:counter(f);font-family:var(--font-m);color:var(--muted);font-size:13px;padding-top:2px}
+.finds b{font-weight:600}
+ul.tight{margin:0;padding-left:18px;color:var(--ink2);font-size:13.5px;display:grid;gap:6px}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-m);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--surface2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-family:var(--font-m);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.c{text-align:center}
+/* controls */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--font-b);border:1px solid var(--line);background:var(--surface);color:var(--ink2);padding:6px 11px;border-radius:99px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sl{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,150px) 84px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.sl output{font-family:var(--font-m);font-size:12.5px;text-align:right}
+.sl input[type=range]{width:100%;accent-color:var(--accent)}
+@media (max-width:560px){.sl{grid-template-columns:1fr 84px}.sl input{grid-column:1/-1;order:3}}
+/* partner cards */
+.pc{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pc.warm{border-left:4px solid var(--warm)}
+.rk{font-family:var(--font-d);font-weight:800;font-size:22px;color:var(--muted);text-align:center;line-height:1}
+.rk small{display:block;font-family:var(--font-m);font-size:10px;font-weight:500;margin-top:4px}
+.pc h3{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{font:500 11.5px var(--font-m);padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink2);background:var(--surface2);white-space:nowrap}
+.pill.open{color:var(--good);border-color:var(--good)}
+.pill.fixed{color:var(--t-unv);border-color:var(--t-unv)}
+.pill.none{color:var(--t-der);border-color:var(--t-der)}
+.pill.unknown{color:var(--muted)}
+.pill.ref{color:var(--t-ass);border-color:var(--t-ass)}
+.pill.warm{color:var(--warm);border-color:var(--warm);background:var(--warm-bg)}
+.pc dl{margin:10px 0 0;display:grid;grid-template-columns:92px minmax(0,1fr);gap:6px 12px;font-size:13.5px}
+.pc dt{font-family:var(--font-m);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding-top:2px}
+.pc dd{margin:0}
+.score{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.score .bar2{flex:1;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;max-width:260px;min-width:120px}
+.score .bar2 i{display:block;height:100%;background:var(--s1);border-radius:4px}
+.mini{display:flex;gap:6px;font-family:var(--font-m);font-size:11.5px;color:var(--ink2);flex-wrap:wrap}
+.mini span{border:1px solid var(--line);border-radius:4px;padding:0 6px}
+.plist{display:grid;gap:12px}
+/* svg charts */
+svg text{font-family:var(--font-b);fill:var(--ink2)}
+svg .m{font-family:var(--font-m)}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+#tip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:var(--bg);font:12.5px/1.4 var(--font-b);padding:7px 10px;border-radius:6px;max-width:280px;opacity:0;transition:opacity .08s}
+details.tbl summary{cursor:pointer;font-size:13px;color:var(--accent);margin-top:10px}
+.note{font-size:13px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 12px}
+.note.warn{border-left-color:var(--t-unv)}
+.note.good{border-left-color:var(--good)}
+.steps{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:100px minmax(0,1fr);gap:16px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.step .when{font-family:var(--font-m);font-size:12px;color:var(--muted)}
+.step .when b{display:block;font-family:var(--font-d);font-size:19px;color:var(--ink);font-weight:800}
+.step ul{margin:8px 0 0;padding-left:18px;color:var(--ink2);font-size:13.5px}
+/* heat grid */
+.heat{display:grid;gap:4px;font-size:12.5px;overflow-x:auto}
+.heat .hc{padding:8px 6px;border-radius:5px;text-align:center;font-family:var(--font-m);font-size:12px}
+.heat .hh{font-family:var(--font-m);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 4px;text-align:center}
+.heat .hr{font-weight:600;padding:8px 6px;display:flex;align-items:center}
+.h3{background:var(--s1);color:#fff}.h2{background:color-mix(in srgb,var(--s1) 55%,var(--surface));color:var(--ink)}.h1{background:color-mix(in srgb,var(--s1) 22%,var(--surface));color:var(--ink)}.h0{background:var(--surface2);color:var(--muted)}
+/* persona cards */
+.persona{display:grid;gap:6px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.persona h4{color:var(--ink);font-size:15px}
+.persona .q{font-style:italic;color:var(--ink2);font-size:13px}
+.persona ul{margin:0;padding-left:16px;font-size:13px;color:var(--ink2)}
+.pos{font-family:var(--font-d);font-size:clamp(18px,2.4vw,24px);font-weight:700;line-height:1.3;max-width:34ch}
+.badge{display:inline-block;font:600 11px var(--font-m);padding:2px 8px;border-radius:4px;background:var(--ink);color:var(--bg);letter-spacing:.04em}
+@media (max-width:560px){.step{grid-template-columns:1fr;gap:6px}.pc{grid-template-columns:1fr}.rk{text-align:left}.rk small{display:inline;margin-left:6px}.pc dl{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{.bar,#tip,.btn{display:none!important}.view[hidden]{display:grid!important}.view{break-before:page}}
+
+/* matrix */
+.mx{display:grid;gap:4px;font-size:12.5px;overflow-x:auto}
+.mx .hh{font-family:var(--font-m);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 4px;text-align:center}
+.mx .hr{font-weight:600;padding:8px 6px;display:flex;align-items:center;font-size:12.5px}
+.mx .mc{padding:8px 6px;border-radius:5px;text-align:center;font-family:var(--font-m);font-size:12px;min-width:0}
+.mx .mc small{display:block;font-size:10px;opacity:.8}
+.r0{background:var(--surface2);color:var(--muted)}.r1{background:color-mix(in srgb,var(--s3) 22%,var(--surface));color:var(--ink)}.r2{background:color-mix(in srgb,var(--s3) 50%,var(--surface));color:var(--ink)}.r3{background:var(--s3);color:#fff}
+.w1{background:color-mix(in srgb,var(--s1) 18%,var(--surface))}.w2{background:color-mix(in srgb,var(--s1) 42%,var(--surface))}.w3{background:color-mix(in srgb,var(--s1) 70%,var(--surface));color:#fff}.w4{background:var(--s1);color:#fff}
+/* segment cards */
+.seg{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.seg .ic{font-family:var(--font-d);font-weight:800;font-size:20px;color:var(--muted);text-align:center;line-height:1}
+.seg .ic small{display:block;font-family:var(--font-m);font-size:10px;font-weight:500;margin-top:4px}
+.seg dl{margin:8px 0 0;display:grid;grid-template-columns:110px minmax(0,1fr);gap:5px 12px;font-size:13.5px}
+.seg dt{font-family:var(--font-m);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding-top:2px}
+.seg dd{margin:0}
+@media (max-width:560px){.seg{grid-template-columns:1fr}.seg .ic{text-align:left}.seg dl{grid-template-columns:1fr}}
+/* dimension bars */
+.dim{display:grid;gap:6px;margin-bottom:14px}
+.dim .bar3{display:flex;height:34px;border-radius:6px;overflow:hidden;gap:2px}
+.dim .bar3 i{display:block;height:100%;font:11.5px var(--font-m);color:#fff;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;min-width:0}
+.dim .dl{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dim .dl b{font-size:14px}
+.dim .dl span{font-family:var(--font-m);font-size:12px;color:var(--ink2)}
+.ladder{display:grid;gap:3px}
+.ladder .lr{display:grid;grid-template-columns:140px minmax(0,1fr) 110px;gap:10px;align-items:center;font-size:12.5px}
+.ladder .lr i{display:block;height:14px;border-radius:3px}
+.ladder .lr .lv{font-family:var(--font-m);text-align:right}
+@media (max-width:560px){.ladder .lr{grid-template-columns:100px minmax(0,1fr) 80px}}
+.geo{display:grid;gap:8px;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.geo h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.geo .kv{display:grid;grid-template-columns:118px minmax(0,1fr);gap:4px 10px;font-size:13px}
+.geo .kv dt{font-family:var(--font-m);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding-top:2px}
+.geo .kv dd{margin:0}
+</style>
+</head>
+<body>
+<div class="bar"><div class="bar-in">
+  <div class="brand"><i></i>NuFlow Lifecycle <small>B2C</small></div>
+  <nav aria-label="Sections">
+    <a id="t-answer" href="#answer">Answer</a>
+    <a id="t-demand" href="#demand">Demand</a>
+    <a id="t-lifecycle" href="#lifecycle">Lifecycle</a>
+    <a id="t-deciders" href="#deciders">Decision-makers</a>
+    <a id="t-touchpoints" href="#touchpoints">Touchpoints</a>
+    <a id="t-channels" href="#channels">Channels</a>
+    <a id="t-framework" href="#framework">GTM framework</a>
+    <a id="t-global" href="#global">Global</a>
+    <a id="t-numbers" href="#numbers">Numbers</a>
+    <a id="t-evidence" href="#evidence">Evidence</a>
+  </nav>
+</div></div>
+
+<main class="wrap">
+
+<!-- ================= ANSWER ================= -->
+<section class="view" id="v-answer">
+  <div class="hero">
+    <span class="eyebrow">NuFlow by BirlaNu · Module F consumer and end-user behaviour · lifecycle and B2C view · November 2026</span>
+    <h1>Sell the first bathroom of a new life, then the tenth year of an old one.</h1>
+    <p class="lead">The B2B explorer followed the specification. This one follows the household: how India's faucet demand splits by occasion, price tier, building type, tenure and city tier; which family life-cycle segments are most receptive to a finish-led polymer-hybrid line and why; who decides at each step; where the first interaction happens; which channel reaches each segment; and how the same logic phases a global roadmap. Tags: <span class="tag src" style="margin-left:0">sourced</span> <span class="tag der">derived</span> <span class="tag ass">assumed</span> <span class="tag unv">unverified</span>.</p>
+  </div>
+  <div class="slide" data-slide="answer"></div>
+
+  <div class="grid g4">
+    <div class="kpi dark"><span class="eyebrow" style="color:inherit;opacity:.7">India faucet demand FY25</span><div class="v num">₹20,190<small>Cr</small></div><div class="l">61% of ₹33,100 Cr bathware; 60% organised; growing ~10% a year</div></div>
+    <div class="kpi"><span class="eyebrow">Receptive to polymer-hybrid</span><div class="v num" id="k-rec">–</div><div class="l">Demand in segments weighted by receptivity across the five Module F dimensions <span class="tag der" style="margin:0">derived</span></div></div>
+    <div class="kpi"><span class="eyebrow">Lifecycle retail revenue, FY30</span><div class="v num" id="k-som">–</div><div class="l">Occasion × footprint × penetration × basket, calibrated to the plan's retail channels</div></div>
+    <div class="kpi"><span class="eyebrow">Buyers who upgrade vs buy first</span><div class="v num">37<small>vs 32%</small></div><div class="l">Knight Frank 2025 buyer survey; investment 25%, retirement 7% <span class="tag src" style="margin:0">sourced</span></div></div>
+  </div>
+
+  <div>
+    <div class="sec-h"><h2>What the research says</h2></div>
+    <ol class="finds" id="finds"></ol>
+  </div>
+
+  <div class="grid g2">
+    <div class="panel">
+      <div class="sec-h"><h3>Which segments are most receptive to polymer bathware, and why</h3></div>
+      <div class="tw"><table>
+        <tr><th>Segment</th><th>Receptivity</th><th>Why</th></tr>
+        <tr><td><b>Mid-price new-build apartments (₹40 L–2.5 Cr), Tier 1–2</b></td><td><span class="pill open">High</span></td><td>Fittings are specified, not shopped; specs are mostly "or equivalent"; buyer judges finish in a sample flat, not material; brass inflation hurts the developer's BOQ</td></tr>
+        <tr><td><b>Young nuclear families and nest-builders</b></td><td><span class="pill open">High</span></td><td>Aesthetics and colour matter most (Gen Z 35% self-expression); first fit-out is a package purchase; price-sensitive on the second and third bathroom</td></tr>
+        <tr><td><b>Replacement in hard-water and coastal cities</b></td><td><span class="pill open">High</span></td><td>Polymer's corrosion and scale resistance is a real benefit; plumber-led purchase where a QR reward decides; replacement is 25%+ of faucet demand</td></tr>
+        <tr><td><b>Elderly and assisted households (SAFE)</b></td><td><span class="pill open">High</span></td><td>Lever handles, cut-free edges, anti-scald; buyer is often the adult child; no incumbent owns the "safe bathroom"</td></tr>
+        <tr><td><b>Institutions: hostels, hospitals, PMAY, government</b></td><td><span class="pill open">High</span></td><td>ISI-marked, unbranded specs; PTMT already used; BirlaNu relationships exist (SRM, Yashoda, AAI, L&amp;T)</td></tr>
+        <tr><td><b>Landlords and rental turnover</b></td><td><span class="pill ref">Medium</span></td><td>Economy buy at turnover; HUE inserts fit a cheap refresh; organised co-living (0.3 mn beds) is spec-driven</td></tr>
+        <tr><td><b>Economy to upper-midscale hotels, Tier 2–3</b></td><td><span class="pill ref">Medium</span></td><td>Owner buys, lifecycle cost matters, no published supplier; brand standards can block</td></tr>
+        <tr><td><b>Premium upgraders (renovation, ₹1.5 Cr+)</b></td><td><span class="pill ref">Medium</span></td><td>Architect-led; finish and warranty weigh equally with design; polymer needs the cut-away and the proof pack</td></tr>
+        <tr><td><b>Luxury and branded residences</b></td><td><span class="pill fixed">Low</span></td><td>Identity-led buying; Artize, GROHE, Gessi anchors; blank-canvas shells; Atelier is a credential only</td></tr>
+      </table></div>
+    </div>
+    <div class="panel">
+      <div class="sec-h"><h3>How this view connects to the rest of the case</h3></div>
+      <div class="tw"><table>
+        <tr><th>Piece</th><th>What this explorer adds</th></tr>
+        <tr><td><b>B2B explorer</b> (specification route)</td><td>The demand cube shows why projects are 30–40% of organised faucet sales and which building types and tiers polymer can enter; the decision-maker map adds the household co-deciders behind the developer's spec</td></tr>
+        <tr><td><b>Reach plan</b> (dealers, plumbers, QR)</td><td>Lifecycle segments give the dealer clusters a target customer and a basket; replacement, elderly retrofit and rental refresh are plumber-led occasions the QR scheme should pay for</td></tr>
+        <tr><td><b>NuFlow lines</b></td><td>Each segment maps to a line: HUE for nest-builders, SAFE for families and seniors, CORE for landlords and institutions, SENSE for hotels and premium upgraders, ATELIER for luxury credentials</td></tr>
+        <tr><td><b>Mid-premium plan</b> (18% EBITDA)</td><td>The retail model here is calibrated to the plan's studio, dealer and D2C revenue (₹3.66 Cr FY28, ₹49.9 Cr FY32) and shows what share of occasions that needs</td></tr>
+        <tr><td><b>Global roadmap</b></td><td>The same segment logic (mass housing, rental, hard water, economy hotels) picks the export geographies, and the compliance table says what the product needs to change</td></tr>
+      </table></div>
+      <p class="note warn" style="margin-top:10px">Not found in any source: a consumer survey on PTMT perception, a plumber-influence percentage for India, a published BHK-to-bathroom dataset, or a developer fittings-upgrade menu. These are the first primary research to commission.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DEMAND ================= -->
+<section class="view" id="v-demand" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Module F · demand segmentation</span>
+    <h2>One market, five cuts: occasion, price tier, building type, tenure, city tier</h2>
+    <p>India's ₹20,190 Cr faucet demand split along the dimensions the brief asks for. Each category carries a receptivity score for a finish-led polymer-hybrid line, with the reason. Pick two dimensions to see the cross-cut in rupees. Shares and scores are editable in the Numbers tab.</p>
+  </div></div>
+  <div class="slide" data-slide="demand"></div>
+  <div class="panel"><div id="dims"></div></div>
+  <div class="grid">
+    <div class="panel col">
+      <div class="sec-top" style="margin-bottom:10px"><div class="sec-h" style="margin:0"><h3>Cross-cut in ₹ Cr</h3><p>Shares are treated as independent, so a cell is the product of two shares. Shading is the combined receptivity.</p></div></div>
+      <div class="chips" id="cube-a" style="margin-bottom:6px"></div>
+      <div class="chips" id="cube-b" style="margin-bottom:12px"></div>
+      <div class="mx" id="cube"></div>
+    </div>
+    <div class="panel col">
+      <h3>Why each category scores the way it does</h3>
+      <div class="tw" style="margin-top:8px"><table id="whytab"></table></div>
+    </div>
+  </div>
+  <div class="grid g3">
+    <div class="kpi sm"><span class="eyebrow">New build vs replacement</span><div class="v num">75 <small>/ 25</small></div><div class="l">Faucet value. Sanitaryware replacement rose from 8% (FY14) to 15% (FY18); owners now renovate every 10–12 years, so replacement keeps gaining about a point a year</div></div>
+    <div class="kpi sm"><span class="eyebrow">Urban tenure</span><div class="v num">67 <small>/ 33</small></div><div class="l">Owner-occupied vs rented households (NSS 2018; Census 2011 27.5%). By fittings spend roughly 85 / 15: landlords buy economy at turnover, tenants only routine upkeep</div></div>
+    <div class="kpi sm"><span class="eyebrow">Price tier, organised</span><div class="v num">22 / 36 / 42</div><div class="l">Entry / mid / premium in Cera's Q2 FY27 mix. Including the unorganised 40%, PTMT and unbranded is the largest single tier by volume</div></div>
+  </div>
+</section>
+
+<!-- ================= LIFECYCLE ================= -->
+<section class="view" id="v-lifecycle" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Family life cycle segmentation</span>
+    <h2>Eight households, eight purchase occasions, five product lines</h2>
+    <p>The seven segments from the case directions plus tenants and landlords, each with a sizing proxy, the purchase occasion, who decides, the line that fits, the first touchpoint and a receptivity score. Weights re-rank them.</p>
+  </div></div>
+  <div class="slide" data-slide="lifecycle"></div>
+  <div class="panel"><div class="grid g2"><div class="col" id="lw"></div><div class="col"><p class="note"><b>Size</b>: occasions per year in India (sourced proxy). <b>Basket</b>: what one occasion spends on CP fittings. <b>Receptivity</b>: fit with a finish-led polymer-hybrid line. <b>Reachability</b>: how directly the plan's channels touch the segment. <b>Timing</b>: how early in FY28–32 the segment pays.</p></div></div></div>
+  <div class="plist" id="seglist"></div>
+  <div class="panel">
+    <div class="sec-h"><h3>Positioning by segment</h3><p>The case asks whether the offer is lifestyle, aesthetic or high-end premium. The answer differs by segment, on one platform.</p></div>
+    <div class="tw"><table>
+      <tr><th>Positioning</th><th>Segments</th><th>Lines</th><th>Claim</th><th>Proof</th></tr>
+      <tr><td><b>Aesthetic-led premium, backed by proof</b> (the lead)</td><td>Nest-builders, young families, mature upgraders</td><td>HUE, SAFE, SENSE</td><td>"The finish you would have chosen, with a warranty you can read"</td><td>Colour inserts, PVD finishes, QR passport, cut-away, 5-year parts warranty</td></tr>
+      <tr><td><b>Safety and care</b></td><td>Growing families, elderly households, retirees</td><td>SAFE, NIGHTGLOW</td><td>"A bathroom that looks after everyone in the house"</td><td>Cut-free edges, anti-scald, lever handles, night glow, IS 17650-2 water saving</td></tr>
+      <tr><td><b>Value with a warranty</b></td><td>Landlords, institutions, replacement</td><td>CORE</td><td>"Lasts longer than the lease"</td><td>Corrosion and scale resistance, front-serviceable modules, dealer and depot footprint</td></tr>
+      <tr><td><b>Credential, not volume</b></td><td>Luxury homes, boutique hotels</td><td>ATELIER</td><td>"A designer object with a metal core"</td><td>Design collaborations, limited capsules, architect references</td></tr>
+    </table></div>
+    <p class="note" style="margin-top:10px">Pure "lifestyle" or "experience" positioning is Jaquar's and Kohler's lane and is paid for with experience centres. NuFlow's wedge is aesthetic plus proof at a mid-premium price, which the plan's gross margin (54–61%) can afford to communicate.</p>
+  </div>
+</section>
+
+<!-- ================= DECISION-MAKERS ================= -->
+<section class="view" id="v-deciders" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Decision-making unit</span>
+    <h2>Who influences, specifies, approves, buys, installs and maintains</h2>
+    <p>Relative influence of each stakeholder at each stage of the purchase journey, for the three journeys a NuFlow bathroom can take. 3 = decides, 2 = strong influence, 1 = some, 0 = none. Scores are judgement informed by the evidence listed below the map.</p>
+  </div></div>
+  <div class="slide" data-slide="deciders"></div>
+  <div class="panel">
+    <div class="chips" id="jsel" style="margin-bottom:12px"></div>
+    <div class="mx" id="dmap"></div>
+    <p class="note" style="margin-top:12px" id="jnote"></p>
+  </div>
+  <div class="grid g2">
+    <div class="panel col">
+      <h3>Marketing approach by stakeholder</h3>
+      <div class="tw" style="margin-top:8px"><table id="stk"></table></div>
+    </div>
+    <div class="panel col">
+      <h3>What the evidence says about the unit</h3>
+      <ul class="tight" style="margin-top:8px">
+        <li><b>Parents are in the room.</b> 83% of buyers say parents were meaningfully involved; 19% say parents made the final call and 28% had a veto; 44% of married women name in-laws as the primary influencer (Ghar.tv Parents' Veto Index, n=1,247, 2026).</li>
+        <li><b>Women buy for use.</b> 69% of women buyers are end-users (Anarock 2025); 87% of women end-users are first-timers (Anarock-LIC HFL).</li>
+        <li><b>Developers pre-specify.</b> Premium developers pre-spec Jaquar Continental or Hindware; buyer upgrades are "one notch up" at ₹1.5–3 lakh a bathroom and go through the developer's fixed materials menu (Studio Matrx). Godrej's customisation FAQ lists no fittings menu.</li>
+        <li><b>Renovation is professional-led.</b> 97–98% of renovating owners hire a professional: contractors and civil engineers 33%, architects 19%, interior designers 19%; 63% hire a plumber (Houzz India 2018–19).</li>
+        <li><b>Contractors substitute.</b> Trade guides warn contractors may silently swap generics for specified brands, which is why installed-product QR verification matters.</li>
+        <li><b>Plumber influence is real but unmeasured in India.</b> Astral, Finolex and Hindware treat the plumber as the primary influencer; Parryware, Prince and Hindware each enrol about one to one and a half lakh. No Indian survey gives a percentage.</li>
+        <li><b>Luxury buyers want blank canvases.</b> UHNI buyers of branded residences strip and redo bathrooms with their own designers (GRI, 2026).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TOUCHPOINTS ================= -->
+<section class="view" id="v-touchpoints" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">First customer interaction</span>
+    <h2>Be present where the home is chosen, not where the tap is bought</h2>
+    <p>The six touchpoints in the directions, plus online and the brand centre, against the lifecycle segments. The cell is how much that touchpoint shapes that segment's choice. Below, the asset NuFlow needs at each touchpoint.</p>
+  </div></div>
+  <div class="slide" data-slide="touchpoints"></div>
+  <div class="panel"><div class="mx" id="tmap"></div></div>
+  <div class="grid g2">
+    <div class="panel col">
+      <h3>The asset at each touchpoint</h3>
+      <div class="tw" style="margin-top:8px"><table id="tassets"></table></div>
+    </div>
+    <div class="col" style="display:grid;gap:16px;align-content:start">
+      <div class="panel">
+        <h3>Evidence</h3>
+        <ul class="tight" style="margin-top:8px">
+          <li>80% of Indian home shoppers discover products on social media; 57% of 18–28s rely on creators against 27% of 45–60s (Deloitte Home Reset, Sep 2026).</li>
+          <li>55% of urban offline home-décor shoppers research online first (Google-Ipsos, n=6,600).</li>
+          <li>Sample flats are built with premium finishes to sell the project; delivered flats can differ, which buyers resent (Housing.com). A sample flat with NuFlow installed is a demonstration to the buyer and a spec to the developer at once.</li>
+          <li>Jaquar runs 22 centres (7 Jaquar World, 15 Orientation Centres); Kohler 3 experience centres plus Studio Kohler Hyderabad; GROHE about 400 points. None publish footfall or conversion.</li>
+          <li>Showrooms and experience centres sell sanitaryware and premium CP; dealers sell mid-range; online sells accessories and standard taps (trade guidance).</li>
+        </ul>
+      </div>
+      <div class="panel warm">
+        <h3>First-interaction plan, FY28</h3>
+        <ul class="tight" style="margin-top:8px">
+          <li>Two sample flats in Hyderabad with the Premier kit, plus a "what is behind the wall" cut-away panel for the sales gallery.</li>
+          <li>Developer sales-gallery kit: buyer-facing QR passport card, colour-insert swatch board, one-page warranty.</li>
+          <li>Four architect studio visits with the Product Intelligence pack (the BirlaNu-referenced practices first).</li>
+          <li>300 fitters trained; QR reward paid only for installs with no 90-day callback.</li>
+          <li>Creator content on the three occasions that convert: first flat set-up, parents' bathroom retrofit, rental refresh with HUE inserts.</li>
+          <li>Experience centre only in Year 2, after POs, in a city where Kohler, Roca and Hindware already court specifiers.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CHANNELS ================= -->
+<section class="view" id="v-channels" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Institutional · trade · non-trade</span>
+    <h2>Three channel families, scored on reach, margin and penetration</h2>
+    <p>The directions ask which channels offer the greatest reach, margins and penetration. Each row is scored 1 to 5 on five criteria; weights re-rank them. Sub-rows break the non-trade opportunity into the customer types the brief lists.</p>
+  </div></div>
+  <div class="slide" data-slide="channels"></div>
+  <div class="panel"><div class="grid g2"><div class="col" id="cw"></div><div class="col"><p class="note"><b>Reach</b>: share of target demand touched. <b>Margin</b>: NuFlow's realised margin after channel cost. <b>Penetration speed</b>: time to first meaningful revenue. <b>Cost to serve</b>: sales and service effort per rupee (5 = low cost). <b>Polymer receptivity</b>: how the channel's buyers judge a polymer-hybrid.</p></div></div></div>
+  <div class="tw"><table id="chtab"></table></div>
+  <div class="grid g3">
+    <div class="panel">
+      <h3>A · Institutional</h3>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 8px">Developers, contractors, architects, residential project developers, large housing institutions.</p>
+      <ul class="tight"><li>Bulk pricing from the kit price book (30% ceiling)</li><li>Specification partnerships and "or equivalent" approvals</li><li>Builder and contractor relationships through BirlaNu's accounts</li><li>Sample-flat installations as the demonstration</li><li>Product demonstrations for procurement and MEP teams</li></ul>
+      <p class="note good" style="margin-top:8px">Launch engine: 47% of Year 1 revenue in the plan. Detail in the B2B explorer.</p>
+    </div>
+    <div class="panel">
+      <h3>B · Retail and trade</h3>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 8px">Dealers, distributors, plumbing retailers, bath showrooms, plumbers and installers.</p>
+      <ul class="tight"><li>Dealer onboarding in clusters of 40; counted only after a reorder</li><li>Channel margins 25% + 4% hub (studios), 22% + 8% distributor (BirlaNu dealers)</li><li>Visibility: hero 8 SKUs and a demo unit per studio</li><li>Training in 25-person sessions; QR rewards for verified installs</li><li>Incentive selling: reorder bonus, protected pricing, one price everywhere</li><li>Premium displays for HUE and SENSE</li></ul>
+      <p class="note good" style="margin-top:8px">Growth engine: 60% of Year 5 revenue. Lifecycle segments give each cluster a target household.</p>
+    </div>
+    <div class="panel">
+      <h3>C · Non-trade</h3>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 8px">Buyers who do not purchase through the dealer network.</p>
+      <ul class="tight"><li>Large builders and developers (framework MoUs)</li><li>Institutional buyers: hostels, hospitals, campuses, government</li><li>Hospitality projects: owner-funded midscale hotels</li><li>Commercial real estate: 52 mn sq ft of office completions in 2025</li><li>Residential facility management: replacement contracts for RWAs and co-living operators</li><li>Renovation and maintenance contractors: package deals on CORE and SAFE</li></ul>
+      <p class="note good" style="margin-top:8px">Separate price book, direct billing, service SLA. Evaluated row by row in the table above.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= GTM FRAMEWORK ================= -->
+<section class="view" id="v-framework" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">GTM framework · six dimensions</span>
+    <h2>Customer base, geography, reach, presence, logistics, institutional opportunity</h2>
+    <p>The directions ask for a GTM built on more than geography. Twelve city clusters are scored 1 to 5 on the six dimensions, with the evidence behind each score. Weights re-rank them; the ranking is the phasing.</p>
+  </div></div>
+  <div class="slide" data-slide="framework"></div>
+  <div class="panel"><div class="grid g2"><div class="col" id="fw"></div><div class="col">
+    <div class="tw"><table>
+      <tr><th>Dimension</th><th>What was analysed</th><th>Proxy used</th></tr>
+      <tr><td>Customer base</td><td>Existing pipe customers, new homeowners, institutional buyers, competitor customers</td><td>BirlaNu client references and plants; developer launches; incumbent weakness by region</td></tr>
+      <tr><td>Geographical base</td><td>Priority cities, Tier 1/2/3, residential growth clusters</td><td>2025 launches and 2026 momentum; price-band mix</td></tr>
+      <tr><td>Distribution reach</td><td>Existing dealers, distributors, dispatch</td><td>Plants and depots in or near the cluster (dealer master not public)</td></tr>
+      <tr><td>Existing presence</td><td>Current customers, relationships, installations</td><td>Named clients and project references by city</td></tr>
+      <tr><td>Distance and logistics</td><td>Factories, warehouses, dealers, projects</td><td>Road distance from Hyderabad and the nearest BirlaNu plant</td></tr>
+      <tr><td>Institutional opportunity</td><td>Builders, developers, contractors, large projects</td><td>Developer pre-sales, open specs found, hotel pipeline</td></tr>
+    </table></div></div></div></div>
+  <div class="tw"><table id="ftab"></table></div>
+  <p class="note">The ranking reproduces the plan's phasing when weights are even: Hyderabad first, Bengaluru and Chennai next, then Pune and NCR, then Mumbai, Kolkata and the Tier 2 clusters. Change the weights to see what would move Ahmedabad or Lucknow up: it is distribution reach and existing presence, which the Topline (East) network and a Gujarat depot could change.</p>
+</section>
+
+<!-- ================= GLOBAL ================= -->
+<section class="view" id="v-global" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Global · price tiers, polymer position, compliance, phasing</span>
+    <h2>India first; then the markets that already tolerate a polymer tap</h2>
+    <p>Where polymer sits today in each geography, where a finish-led hybrid could credibly move, what certification the product needs, which segment buys, and the phased roadmap. India already exports USD 1.08 bn of taps and valves (HS 8481.80); the question is which of those routes a polymer-hybrid can use.</p>
+  </div></div>
+  <div class="slide" data-slide="global"></div>
+  <div class="grid" style="grid-template-columns:minmax(0,1fr)">
+    <div class="panel col">
+      <h3>India: the price ladder and where polymer sits</h3>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 10px">Listed MRPs for a basin mixer or pillar cock, November 2026. PTMT lives below ₹500; NuFlow's ladder runs ₹899 to ₹24,999.</p>
+      <div class="ladder" id="ladder"></div>
+      <p class="note" style="margin-top:10px">The gap NuFlow fills is the one incumbents left: a polymer body with a mid-premium finish between Essco and Jaquar Prime. Cera's Polipluz and Truflo went the other way, down into the ₹9,000 Cr unorganised tier.</p>
+    </div>
+    <div class="panel col">
+      <h3>Compliance checklist by geography</h3>
+      <div class="tw" style="margin-top:8px"><table>
+        <tr><th>Geography</th><th>Must-have for a polymer-bodied tap</th><th>Can a polymer body pass?</th></tr>
+        <tr><td><b>India</b></td><td>IS 9763 (plastic taps), IS 8931 / IS 1701 for mixers; IS 17650-2 water efficiency; GST 18%</td><td>Yes; IS 9763 is written for plastic bodies</td></tr>
+        <tr><td><b>GCC</b></td><td>GSO water-efficiency label (GSO-WER); SABER + SASO EN 246 and the Saudi water label (SASO 2655); Qatar Green Label mandatory from 24 Feb 2026</td><td>Yes; labels test flow, not material</td></tr>
+        <tr><td><b>Africa</b></td><td>South Africa SANS 1021 (plastic separate-control taps), SANS 1808-37 (plastic single-lever mixers), SANS 10252-1; Nigeria SONCAP per shipment; Kenya PVoC</td><td>Yes; SA has explicit plastic-tap standards</td></tr>
+        <tr><td><b>South Asia</b></td><td>Nepal draft NS covers copper-alloy taps only; Bangladesh BSTI not mandatory for taps; Sri Lanka SLS unclear</td><td>Open market; Nepal needs a standards conversation</td></tr>
+        <tr><td><b>SE Asia</b></td><td>Indonesia SNI 122:2022 (UPC-based, factory audit, 3–6 months); Malaysia SIRIM</td><td>Yes, with audit</td></tr>
+        <tr><td><b>UK / EU</b></td><td>WRAS material (BS 6920) and product approval; EN 817 / EN 200 endurance; KTW-BWGL (Germany); EU positive list binding 31 Dec 2026; TMV2 for thermostatic</td><td>Yes for material; hot-water cycling and 80°C duty are the hurdles</td></tr>
+        <tr><td><b>USA / Canada</b></td><td>NSF/ANSI 61 (tests plastics for VOCs, BPA) and NSF/ANSI 372 lead-free (0.25%); ASME A112.18.1 / CSA B125.1; cUPC listing; WaterSense 1.5 gpm</td><td>Yes; brass inserts must be lead-free alloy</td></tr>
+        <tr><td><b>Australia / NZ</b></td><td>WaterMark to AS 3718:2021 (lists plastic taps); WELS; lead-free (≤0.25%) from 1 May 2026; AS/NZS 4020; NZ recognises WaterMark from Oct 2025</td><td>Yes; a polymer body sidesteps the copper-alloy rule</td></tr>
+      </table></div>
+    </div>
+  </div>
+  <div class="grid g2" id="geos"></div>
+  <div class="panel">
+    <div class="sec-h"><h3>Phased product roadmap by geography</h3><p>Sub-category to lead with, the adaptation each geography needs, the receptive segment, and the gate. Timing follows the plan: India FY28–30 first; the GCC pilot is upside in FY32.</p></div>
+    <div class="tw"><table id="roadmap"></table></div>
+    <p class="note warn" style="margin-top:10px">Gaps to verify before any export step: a WRAS-approved plastic-body basin mixer precedent outside leisure taps; Sri Lanka SLS and the KEBS tap standard number; GCC-wide market size (Mordor withholds it); and whether EN 817 hot-water cycling passes on the chosen polymer.</p>
+  </div>
+</section>
+
+<!-- ================= NUMBERS ================= -->
+<section class="view" id="v-numbers" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Numbers · demand cube and lifecycle revenue</span>
+    <h2>Split the market, weight it by receptivity, then size the retail revenue by occasion</h2>
+    <p>Two models. The demand cube splits ₹20,190 Cr by the five Module F dimensions and weights each category by receptivity to a polymer-hybrid line. The lifecycle model turns household occasions into FY28–FY32 retail revenue and checks it against the plan's studio, dealer and D2C channels. Every slider is tagged.</p>
+  </div></div>
+  <div class="slide" data-slide="numbers"></div>
+  <div class="panel">
+    <div class="eyebrow" style="margin-bottom:8px">Scenario</div>
+    <div class="chips" id="presets"><button class="chip" data-p="low" aria-pressed="false">Low</button><button class="chip" data-p="base" aria-pressed="true">Base</button><button class="chip" data-p="high" aria-pressed="false">High</button></div>
+  </div>
+  <div class="grid g2">
+    <div class="col panel">
+      <h3>Demand cube</h3>
+      <svg class="chart" id="cubechart" viewBox="0 0 560 230" role="img" aria-label="Receptive demand by dimension"></svg>
+      <details class="tbl"><summary>Show as table</summary><div class="tw" style="margin-top:8px"><table id="cubetab"></table></div></details>
+      <p class="note" style="margin-top:10px">Receptive pool = market × product of each dimension's weighted receptivity. Dimensions are treated as independent, which overstates precision; use it to compare scenarios, not to claim a share.</p>
+      <h3 style="margin-top:16px">Market and growth</h3>
+      <div id="s-m"></div>
+      <h3 style="margin-top:16px">Shares (each dimension normalised to 100%)</h3>
+      <div id="s-d"></div>
+    </div>
+    <div class="col panel">
+      <h3>Receptivity by category (0 = none, 1 = fully receptive)</h3>
+      <div id="s-rc"></div>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="col panel">
+      <h3>Lifecycle retail revenue FY28–FY32 against the plan</h3>
+      <svg class="chart" id="lrev" viewBox="0 0 560 300" role="img" aria-label="Retail revenue by lifecycle segment"></svg>
+      <div class="legend" id="lrevleg"></div>
+      <details class="tbl"><summary>Show as table</summary><div class="tw" style="margin-top:8px"><table id="lrt"></table></div></details>
+      <p class="note" style="margin-top:10px">Plan retail = premium studios + BirlaNu plumbing dealers + D2C: ₹3.66 Cr in FY28 and ₹49.94 Cr in FY32 (Years 2–4 not published). The base case is calibrated to those two points, so the sliders show what the plan implies: a footprint holding 3% of India's receptive occasions in Year 1 (Telangana) and 30% by Year 5, converting about 1.35% of them each year.</p>
+      <h3 style="margin-top:16px">Footprint and penetration by year</h3>
+      <div id="s-y"></div>
+    </div>
+    <div class="col panel">
+      <h3>Occasions and baskets by segment</h3>
+      <div id="s-s"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EVIDENCE ================= -->
+<section class="view" id="v-evidence" hidden>
+  <div class="sec-top"><div class="sec-h">
+    <span class="eyebrow">Evidence log</span>
+    <h2>Every figure, where it came from, and how sure to be</h2>
+    <p>Sourced figures were read from the linked pages in November 2026. Derived figures are arithmetic on sourced ones. Assumed figures are the analyst's and the first thing to challenge. Unverified items are flagged so no slide repeats them as fact.</p>
+  </div></div>
+  <div class="slide" data-slide="evidence"></div>
+  <div class="chips" id="ef"></div>
+  <div class="tw"><table id="etab"></table></div>
+</section>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+/* ---------- Module F dimensions ---------- */
+/* cats: [key, label, share %, receptivity 0-1, why, tag] */
+const DIMS=[
+ {k:'occ',name:'Occasion',q:'New build vs replacement',src:'Nirmal Bang FY18 trend; Anand Rathi 2026; A&M 2025',cats:[
+   ['new','New build',75,0.80,'Fittings are specified by developer, architect or contractor; 25 of 27 developer specs are open or unbranded; brass inflation hits the BOQ. Polymer is judged on finish and warranty in a sample flat, not on material.','src'],
+   ['rep','Replacement and renovation',25,0.60,'Plumber-led; the buyer wants the same shape that fits the wall and a brand the plumber trusts. Polymer wins where corrosion or scale killed the last tap. 97% of renovators hire a professional.','src']]},
+ {k:'tier',name:'Price tier',q:'Whole market incl. unorganised',src:'Cera Q2 FY27 mix; Mordor 58% organised; IMARC luxury',cats:[
+   ['unorg','PTMT and unbranded',40,0.30,'Price-led, hardware-store counters, PTMT already here at ₹200–500 a tap. NuFlow CORE sits above it; only the warranty and finish pull a buyer up.','der'],
+   ['eco','Economy brass (Essco, Parryware entry)',15,0.70,'Buyers who stretched to a brand at ₹800–2,600; a polymer-hybrid with a chrome finish and a longer warranty at the same price is a fair trade.','der'],
+   ['mid','Mid (Jaquar Continental, Cera, Hindware)',21,0.90,'The volume of organised demand (Cera mid 36%). HUE and SAFE price at par; the finish and colour inserts are the differentiator.','der'],
+   ['prem','Premium (Jaquar Kubix, Kohler, GROHE Eurosmart)',22,0.70,'Design-literate buyers; finish, warranty and water efficiency weigh equally. Polymer needs the cut-away and the proof pack; SENSE competes on price here.','der'],
+   ['lux','Luxury (Artize, GROHE Allure, Gessi)',2,0.20,'Identity-led; brass and PVD are the story. Atelier is a credential, not a volume play.','src']]},
+ {k:'bld',name:'Building type',q:'Residential vs commercial, institutional, hospitality',src:'Mordor residential 67.65%; Nirmal Bang institutional 30%; Anarock office; ICRA hospitals',cats:[
+   ['res','Residential',68,0.90,'Where lifecycle segments live and where specs are open. 67.7% of faucet revenue.','src'],
+   ['com','Commercial (office, retail)',14,0.60,'Facility-managed, sensor and heavy-use fittings; 52 mn sq ft of office completed in 2025. SENSE fits; brand standards of global tenants can block.','der'],
+   ['hosp','Hospitality',8,0.50,'Owner-funded midscale hotels are open; branded luxury references Jaquar/Artize, TOTO, GROHE. 11,424 branded rooms added in 2025-26.','der'],
+   ['inst','Institutional (health, education, government)',10,0.80,'ISI-marked, unbranded specs; PTMT already used; 34,000 hospital beds coming by FY30; BirlaNu relationships with SRM, Yashoda, AAI, L&T.','der']]},
+ {k:'ten',name:'Tenure',q:'Owner-occupied vs rental (residential spend)',src:'NSS 2018 63.8% urban owned; Census 2011 27.5% rented; Model Tenancy Act upkeep rules',cats:[
+   ['own','Owner-occupied',85,0.90,'Owners buy for ten years and for looks; the lifecycle segments are mostly owners. 67% of urban households.','der'],
+   ['rent','Rental and co-living',15,0.70,'Landlords buy economy at turnover and tenants do routine upkeep (Model Tenancy Act); HUE inserts and CORE fit; organised co-living (0.3 mn beds) is spec-driven.','der']]},
+ {k:'city',name:'City tier',q:'Tier 1 vs Tier 2 vs Tier 3',src:'Cera tier mix 36/23/41; Magicbricks Tier 2 interiors 20%',cats:[
+   ['t1','Tier 1',38,0.90,'Developer apartments, specifiers and studios are concentrated here; the plan\'s FY28–30 footprint.','der'],
+   ['t2','Tier 2',25,0.80,'Premiumising (28% of sales above ₹1 Cr); interiors spend 74% of metro levels; reached through dealers from FY31.','der'],
+   ['t3','Tier 3 and below',37,0.50,'Cera\'s largest tier (41%) but PTMT and unbranded dominate; self-build and plumber-led. A CORE and Reach-model market later.','der']]}
+];
+const RECEPT_LABEL=v=>v>=0.8?'High':v>=0.6?'Medium':v>=0.4?'Low-medium':'Low';
+
+/* ---------- lifecycle segments ---------- */
+/* sc: [size, basket, receptivity, reachability, timing] 1-5 ; occ: national occasions/yr ; basket ₹ ; rec: 0-1.5 multiplier */
+const SEGS=[
+ {id:'nest',n:'Newly married couples (nest-builders)',ch:'Establishing a first household; look and colour matter; budget shared with parents',occ:3600000,occNote:'≈1 crore weddings a year (IBEF; 46 lakh in the Nov–Dec 2025 season, CAIT) × 36% urban',basket:8000,rec:1.1,sc:[5,3,5,3,4],
+  occasion:'First fit-out: a new flat, a rented flat refreshed, or a parental home\'s spare bathroom redone',need:'Aesthetic, modern, customised; a package that looks premium on a first budget',line:'HUE (colour inserts), SAFE hand shower, CORE valves',touch:'Sample flat, interior designer, Instagram and creators (57% of 18–28s rely on creators)',decider:'Couple, with parents and in-laws as co-deciders (83% say parents involved)',why:'Highest receptivity: finish-led, first purchase without a brand habit, colour as self-expression.'},
+ {id:'first',n:'Young nuclear families buying a first home',ch:'Building or buying a first home; 64% of first-timers are under 35; 3BHK is the preferred format (48%)',occ:360000,occNote:'≈5.5 lakh developer units sold (top 7 + Tier 2) × 65% self-use; upgrade decisions on ≈20% of them',basket:20000,rec:1.0,sc:[3,4,4,4,4],
+  occasion:'Fittings come with the flat; the family decides whether to upgrade one notch (₹1.5–3 lakh a bathroom incl. sanitaryware) at the developer\'s menu',need:'Complete bathroom package, child safety, durability; "will it look like the sample flat?"',line:'Premier kit (HUE + SAFE) as the developer upgrade; SAFE for the children\'s bathroom',touch:'Developer sales gallery and sample flat; architect; online research first (55%)',decider:'Developer specifies; family approves the upgrade; spouse and parents weigh in',why:'The B2B spec decides the base; the family decides the upgrade. Win both with the same kit.'},
+ {id:'grow',n:'Growing families (children at home)',ch:'Increasing household needs; second bathroom, repairs, water bills',occ:5500000,occNote:'≈55 mn urban nuclear households (42.1 mn in 2011, growing 3.4% a year) × one fittings replacement per 10 years',basket:3000,rec:0.9,sc:[5,2,4,4,3],
+  occasion:'A leaking mixer, a broken health faucet, a second bathroom; plumber called, dealer visited',need:'Convenience, functionality, durability; no callbacks',line:'CORE and SAFE replacement SKUs; NIGHTGLOW for children',touch:'Plumber recommendation, dealer counter, e-commerce for the health faucet',decider:'Plumber recommends, parent buys; price checked online',why:'The volume segment for the Reach model; polymer wins on scale and corrosion where the last brass tap failed.'},
+ {id:'mature',n:'Mature homeowners upgrading',ch:'Upgrading an existing home; renovation every 10–12 years; 37% of buyers are upgraders',occ:1500000,occNote:'≈70 mn urban owner households × 8% renovating a year × 27% including a bathroom (Houzz India)',basket:15000,rec:0.8,sc:[4,4,3,3,3],
+  occasion:'Master or guest bathroom renovation with a contractor, architect or interior designer',need:'Premium replacement, matte and PVD finishes, thermostatic showers, water saving',line:'HUE, SENSE, NIGHTGLOW; Atelier capsule for the few',touch:'Architect or ID consultation, experience centre, dealer proof corner',decider:'Homeowner with the designer; contractor executes and can substitute',why:'Medium receptivity: design-literate and brand-aware; needs the proof pack, converts through designers.'},
+ {id:'retire',n:'Retired individuals and downsizers',ch:'Planning a comfortable retirement home; 7% of buyers; 75+ show the highest purchase intent index (167)',occ:80000,occNote:'≈5.5 lakh developer units × 7% retirement motive + ≈3,000 senior-living units a year (22,157 stock, +14,900 by 2030)',basket:12000,rec:1.1,sc:[1,3,5,3,3],
+  occasion:'A smaller flat, a senior-living unit, or a retirement home fit-out',need:'Easy-to-use, safe, accessible fittings; lever handles, anti-scald, grab points',line:'SAFE as the hero; SENSE sensor taps; NIGHTGLOW',touch:'Senior-living developers (ASLI members), dealer, adult children online',decider:'Retiree with adult children; senior-living operator specifies',why:'High receptivity and no incumbent owns "safe"; small today, growing with 162 mn people over 60.'},
+ {id:'elder',n:'Elderly households needing assistance',ch:'Safety and convenience; 26% of 60+ live alone or with a spouse only (LASI)',occ:450000,occNote:'≈45 mn households with a senior × 35% urban × 3% retrofitting a bathroom in a year',basket:6000,rec:1.2,sc:[3,2,5,3,3],
+  occasion:'Retrofit of the parents\' bathroom after a fall, a hospital stay, or a visiting child\'s decision',need:'Geriatric-friendly innovation: lever and sensor taps, anti-scald, cut-free edges, night visibility',line:'SAFE retrofit kit; NIGHTGLOW; SENSE',touch:'Plumber, the adult child buying online, hospital discharge and home-care providers',decider:'Adult child pays; parent approves; plumber installs',why:'Highest receptivity: the need is functional, the buyer is a younger digital decider, and the category is unclaimed.'},
+ {id:'lux',n:'Premium and luxury homeowners',ch:'Aesthetics and exclusivity; identity-led buying; blank-canvas interiors',occ:60000,occNote:'≈46,000 launches above ₹2.5 Cr (11% of top-7) + luxury renovations',basket:60000,rec:0.3,sc:[1,5,1,2,1],
+  occasion:'New luxury build or a designer-led renovation; often a stripped shell redone with the owner\'s architect',need:'Designer finishes, customised solutions, brand provenance',line:'ATELIER capsule (metal core, polymer and PVD shell); SENSE',touch:'Architect and designer, experience centres, design collaborations',decider:'Architect and owner; brand standards for branded residences',why:'Low receptivity: brass and provenance are the point. Atelier earns references, not revenue.'},
+ {id:'rent',n:'Tenants and landlords (added)',ch:'A third of urban households rent (46% in Karnataka, 44% in AP); 31% of buyers now consider renting instead',occ:1100000,occNote:'≈30 mn urban rented households × 25% turnover × 15% of turnovers replacing fittings',basket:1500,rec:0.8,sc:[4,1,3,3,2],
+  occasion:'Turnover refresh by the landlord; a tenant\'s cheap look change; co-living operator fit-out',need:'Cheap, quick, durable; no plumber for the insert swap',line:'HUE inserts (₹699), CORE health faucet, CORE pillar taps',touch:'Landlord and property manager, marketplace, co-living operator procurement',decider:'Landlord pays at turnover; tenant pays routine upkeep (Model Tenancy Act)',why:'Medium receptivity: price-led but polymer-neutral; inserts are the repeat purchase.'}
+];
+const LWCFG=[['lv','Size',25],['lb','Basket',20],['lr','Receptivity',25],['la','Reachability',15],['lt','Timing',15]];
+const LW={lv:25,lb:20,lr:25,la:15,lt:15};
+
+/* ---------- decision journeys ---------- */
+const STAGES=['Awareness','Specification','Recommendation','Approval','Purchase','Installation','Maintenance'];
+const STK=[
+ ['Homeowner (end user)','Final preference and approval','Product experience, design and customisation; sample flat; QR passport'],
+ ['Spouse, parents, in-laws (added)','Co-decision and veto on the home and its finishes','Family-facing content; the "safe for parents" story; sample-flat visits for the family'],
+ ['Builder / developer','Product specification for residential projects','Institutional partnerships and bulk pricing; equivalence file; sample-flat installation'],
+ ['Promoter / project owner','Commercial and strategic approval','Business proposition and project economics; single-supplier bundle'],
+ ['Procurement team','Commercial evaluation and sourcing','Price book, quality evidence and supply reliability; one invoice with pipes'],
+ ['Architect','Design and material specification','Product Intelligence pack, CAD/BIM, samples; studio visits'],
+ ['Interior designer','Aesthetic and finish selection','Colour customisation, PVD finishes, premium displays'],
+ ['Contractor','Product selection and installation influence','Technical demonstrations and incentives; approved-vendor listing'],
+ ['Plumber','Recommendation and installation','Training, product familiarity, QR rewards for verified installs'],
+ ['Dealer / retailer','Availability and recommendation','Channel margins, demo units, reorder bonus, protected pricing'],
+ ['Facility manager / RWA','Maintenance and replacement decisions','Reliability, servicing, lifecycle cost; parts hotline']
+];
+/* influence 0-3 per stakeholder per stage, per journey */
+const JOURNEYS={
+ dev:{n:'Developer flat (new build)',note:'The developer and architect set the base specification; the family decides only the upgrade. Procurement and the promoter hold the commercial gates; the plumbing contractor installs and can substitute if nobody checks.',
+  m:[[1,0,0,2,1,0,2],[1,0,1,2,1,0,1],[2,3,1,3,3,1,0],[1,1,0,3,2,0,0],[0,2,0,3,3,1,0],[2,3,2,1,0,0,0],[1,2,2,1,0,0,0],[0,1,2,1,1,3,1],[0,0,1,0,0,3,2],[0,0,1,0,1,0,1],[0,0,0,0,0,0,3]]},
+ self:{n:'Self-built house (owner-builder)',note:'The owner decides, but the contractor and plumber shape what is bought and from where; the dealer counter is the point of sale. Architects appear only on larger homes.',
+  m:[[3,2,1,3,3,0,2],[2,1,1,2,2,0,1],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[1,2,1,1,0,0,0],[1,1,1,1,0,0,0],[1,2,3,2,2,3,1],[1,1,3,1,2,3,3],[2,1,2,1,3,0,1],[0,0,0,0,0,0,0]]},
+ reno:{n:'Renovation or replacement',note:'97% of renovators hire a professional. The interior designer or contractor leads larger jobs; a leaking tap is the plumber\'s call. The dealer and online price checks sit at purchase.',
+  m:[[3,1,1,3,3,0,3],[2,1,1,2,1,0,1],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[1,2,1,1,0,0,0],[2,3,2,2,1,0,0],[1,2,2,1,2,3,1],[2,1,3,1,2,3,3],[2,1,2,1,3,0,1],[1,0,0,1,0,0,2]]}
+};
+
+/* ---------- touchpoints ---------- */
+const TPS=['Builder / developer office','Project experience centre','Sample flat / model apartment','Architect / ID consultation','Contractor / plumber recommendation','Dealer / retail demo','Online, social, creators (added)','Brand experience centre (added)'];
+const TSEG=['Nest-builders','First-home families','Growing families','Mature upgraders','Retirees','Elderly households','Luxury','Tenants / landlords'];
+const TMAT=[[1,3,0,1,2,0,0,3],[2,3,0,1,1,0,1,2],[3,3,1,2,1,0,1,2],[2,2,1,3,2,1,3,0],[1,2,3,2,3,3,0,2],[1,1,2,2,2,2,0,2],[3,2,2,2,2,3,1,3],[0,0,0,2,2,1,3,0]];
+const TASSETS=[
+ ['Builder / developer office','Equivalence file, kit price book, buyer-facing QR passport card, bundle offer with BirlaNu pipes','Key account manager'],
+ ['Project experience centre','Cut-away panel ("what is behind the wall"), finish and colour swatch board, warranty one-pager','Developer sales team'],
+ ['Sample flat / model apartment','Premier kit installed and labelled; NIGHTGLOW in the children\'s bathroom; SAFE in the parents\' bathroom','Two in Hyderabad by Feb 2027'],
+ ['Architect / ID consultation','Product Intelligence pack: 3D anatomy, material map, CAD/BIM; HUE samples; Atelier collaborations','Architect-specification manager'],
+ ['Contractor / plumber recommendation','25-person training, QR reward for verified installs with zero 90-day callback, parts hotline','300 fitters before first delivery'],
+ ['Dealer / retail demo','Hero 8 SKUs, demo unit, proof corner with cut-away, insert swatches','80 studios, 200 BirlaNu dealers in FY28'],
+ ['Online, social, creators','Three occasion stories (first flat, parents\' retrofit, rental refresh), spares and inserts store, warranty registration','Brand site live Jul 2027'],
+ ['Brand experience centre','Specifier events, finish library, SENSE demos','Hyderabad in Year 2, after POs']
+];
+
+/* ---------- channel evaluation ---------- */
+/* sc: reach, margin, penetration speed, cost to serve (5 = low cost), polymer receptivity */
+const CHROWS=[
+ {g:'A · Institutional',n:'Developers and builders (project phases)',sc:[4,3,4,3,4],note:'47% of plan Year 1; 30% discount ceiling; spec-driven; warm via BirlaNu accounts'},
+ {g:'A · Institutional',n:'Contractors and EPC (plumbing packages)',sc:[3,3,3,3,4],note:'Execute to spec; approved-vendor listing; institutional and mass-housing packages'},
+ {g:'A · Institutional',n:'Architects and interior designers (specifiers)',sc:[3,4,2,2,3],note:'No direct revenue; decide the spec; 40 specs logged by Mar 2028'},
+ {g:'B · Retail and trade',n:'Premium bath studios',sc:[3,3,3,3,3],note:'25% + 4% margin; HUE and SENSE sell-through; 80 → 380; counted after a reorder'},
+ {g:'B · Retail and trade',n:'BirlaNu plumbing dealers',sc:[4,4,4,4,4],note:'22% + 8%; CORE and SAFE pull-through; 200 → 850; existing credit terms'},
+ {g:'B · Retail and trade',n:'Plumbers and installers',sc:[5,5,3,4,4],note:'Indirect; QR rewards; the switch point for replacement occasions'},
+ {g:'B · Retail and trade',n:'Marketplaces and brand D2C',sc:[3,3,4,4,4],note:'15% platform cost; spares, inserts, health faucets; never below dealer street price'},
+ {g:'C · Non-trade',n:'Large builders and developers (framework MoUs)',sc:[4,3,2,4,4],note:'The GROHE–Gaurs model (40,000 homes); expand step after a pilot phase'},
+ {g:'C · Non-trade',n:'Institutional buyers (hostels, hospitals, government)',sc:[3,3,3,4,5],note:'ISI-marked specs; PTMT accepted; BirlaNu references (SRM, Yashoda, AAI, IIM Jammu)'},
+ {g:'C · Non-trade',n:'Hospitality projects (owner-funded midscale)',sc:[2,3,3,2,3],note:'35% ceiling; brand standards can block; 71% of signings in Tier 2–3'},
+ {g:'C · Non-trade',n:'Commercial real estate (office, retail)',sc:[2,3,2,2,3],note:'52 mn sq ft completed in 2025; sensor taps; global tenants\' standards'},
+ {g:'C · Non-trade',n:'Residential facility management and RWAs',sc:[3,4,3,4,4],note:'Replacement contracts; co-living operators; lifecycle-cost sale'},
+ {g:'C · Non-trade',n:'Renovation and maintenance contractors',sc:[3,4,4,4,4],note:'Package deals on CORE and SAFE; the professional behind 97% of renovations'}
+];
+const CWCFG=[['cr','Reach',25],['cm','Margin',20],['cp','Penetration speed',20],['cc','Cost to serve',15],['cx','Polymer receptivity',20]];
+const CWV={cr:25,cm:20,cp:20,cc:15,cx:20};
+
+/* ---------- GTM framework clusters ---------- */
+/* sc: customer base, geographical base, distribution reach, existing presence, distance/logistics, institutional opportunity */
+const CLUSTERS=[
+ {n:'Hyderabad / Telangana',sc:[4,3,5,5,5,4],ev:'BirlaNu HQ, R&D centre, Thimmapur and Hyderabad plants; Telangana Secretariat, Yashoda, Aurobindo, IIT-H references; 43k launches 2025, 9M 2026 +6%; open specs (Rajapushpa, Aparna, Vasavi, Prestige); PRISM 300 hotels'},
+ {n:'Bengaluru',sc:[3,5,3,2,3,5],ev:'74k launches, 57% listed-developer share; Brigade, Prestige, Puravankara, Sobha, Ramky, Sumadhura with open specs; 570 km from Hyderabad; no BirlaNu plant'},
+ {n:'Chennai',sc:[4,3,4,4,3,4],ev:'Chennai plant; Casagrand and Appaswamy are BirlaNu clients; SRM; 27k launches (+30%); Parryware home turf'},
+ {n:'Pune',sc:[3,4,3,4,2,4],ev:'68k launches; Symbiosis and Pune Metro references; Wada plant (Maharashtra); Kolte-Patil, Godrej 24, Shapoorji open specs; Ventive; 560 km'},
+ {n:'Delhi NCR',sc:[4,4,4,4,2,3],ev:'62k launches but 55% above ₹2.5 Cr; DLF, M3M, Signature Global (ISI spec); Faridabad and Jhajjar plants; Bharat Mandapam reference; Jaquar\'s strongest region'},
+ {n:'Mumbai MMR',sc:[3,5,3,3,2,3],ev:'126k launches, 72% under ₹1.5 Cr; Raheja client; Wada plant; Lodha, Oberoi, Kalpataru; premium-brass habit; 700 km'},
+ {n:'Kolkata / East',sc:[3,2,4,2,3,2],ev:'19k launches (+31%); Topline/Crestia East network and Jasidih, Balasore, Cuttack plants; Parryware and Hindware strong; few open specs found'},
+ {n:'Ahmedabad / Gujarat',sc:[2,4,3,1,2,2],ev:'Largest Tier 2 market (51k sold, 33% of Tier 2); Golan plant; Cera\'s home turf; 15,322 RERA projects'},
+ {n:'Lucknow / UP',sc:[2,3,3,1,1,2],ev:'Sathariya plant; Lucknow sales +6% and hotel supply +14.6%; 184 units per project; ITC signings'},
+ {n:'Coimbatore / Kochi (South Tier 2)',sc:[3,3,3,2,3,3],ev:'Coimbatore sales +21% Q1 2025 and land deals; Kochi coastal corrosion story; Cera strong in Kerala; Coimbatore airport reference unverified'},
+ {n:'Vizag / Vijayawada (AP)',sc:[3,2,4,3,4,3],ev:'Kondapalli plant; AP rental share 44%; PRISM target state; Vizag sales −37% in Q1 2025; Nellore greenfield'},
+ {n:'Jaipur / Rajasthan',sc:[2,2,2,1,1,3],ev:'Jaquar\'s home region; ITC Welcomhotel 140 keys; Udaipur hotel supply +32%; hard-water story; 1,086 listed dealer contacts'}
+];
+const FWCFG=[['f1','Customer base',16],['f2','Geographical base',17],['f3','Distribution reach',17],['f4','Existing presence',16],['f5','Distance and logistics',17],['f6','Institutional opportunity',17]];
+const FWV={f1:16,f2:17,f3:17,f4:16,f5:17,f6:17};
+
+/* ---------- global ---------- */
+const LADDER=[
+ ['PTMT pillar cock (Ruhe)',282,'var(--neutral)'],['Cera Garnet pillar cock',867,'var(--f1)'],['NuFlow CORE bib tap',1299,'var(--s3)'],['Essco Orbit pillar cock',2600,'var(--f1)'],
+ ['Jaquar Continental Prime SL basin mixer',3460,'var(--s1)'],['NuFlow HUE basin mixer',4999,'var(--s3)'],['Hindware Element SL basin mixer',5300,'var(--s1)'],['Kohler July single-control',5720,'var(--s1)'],
+ ['Jaquar Kubix Prime SL basin mixer',8070,'var(--f3)'],['NuFlow SENSE sensor faucet',12999,'var(--s3)'],['GROHE Eurosmart 2021',14100,'var(--f3)'],['NuFlow ATELIER tall mixer',14999,'var(--s3)'],
+ ['GROHE Essence S (PVD)',34100,'var(--s4)'],['Artize Tiaara SL basin mixer',66100,'var(--s4)'],['GROHE Allure M',91200,'var(--s4)']
+];
+const GEOS=[
+ {n:'GCC (UAE, Saudi, Qatar, Oman)',ph:'Phase 1 · upside from FY32',size:'Saudi USD 307 mn (2025) → 541 mn (2034), 6.5%; UAE 8.7% CAGR; India already ships USD 148 mn (UAE) and USD 99 mn (Saudi) of HS 8481',tiers:'Economy zinc (Milano AED 89) → Ideal Standard mid → GROHE and Gessi premium. PTMT noted as an emerging budget and commercial option.',poly:'Budget and commercial; labour-camp ablution units',move:'Mid tier (AED 150–400): basin mixers and ablution taps with a corrosion story',seg:'Sakani mass housing (48,000 families in H1 2025), labour accommodation, economy hotels, coastal corrosion',cert:'GSO water label; SABER + SASO EN 246 and SASO 2655 label; Qatar Green Label from Feb 2026',adapt:'Flow-rated cartridges for Class A labels; desert heat and chlorinated-water test data; Arabic labelling'},
+ {n:'Africa (South Africa, Kenya, Nigeria, East Africa)',ph:'Phase 1 · with GCC',size:'South Africa USD 148 mn → 259 mn (2034), 6.2%; LAMEA 9% CAGR; South Africa is the most frequent HS 84818020 destination in shipment data',tiers:'Chinese ABS and PP imports at the bottom; Cobra (LIXIL) brass mid (Nile R1,249); Hansgrohe premium',poly:'Economy ABS and PP imports, hardware chains',move:'Economy-plus to mid: pillar and bib taps, then basin mixers with a warranty',seg:'Affordable housing tenders (Kenya 200,000 units a year ambition), coastal cities, hospitals and schools',cert:'SA: SANS 1021 and SANS 1808-37 (explicit plastic-tap standards), SANS 10252-1; Nigeria SONCAP per shipment; Kenya PVoC',adapt:'UV-stable shells, low-pressure performance, 1/2-inch BSP threads, SANS test reports'},
+ {n:'South Asia (Nepal, Bangladesh, Sri Lanka)',ph:'Phase 2 · FY33+',size:'Bangladesh taps above Tk 1,500 Cr growing ~15% a year; imports over half the market',tiers:'Local taps Tk 20–500; imports Tk 500–5,000; sensor Tk 7,000–20,000. PRAN-RFL built its faucet business from plastic.',poly:'Economy plastic is mainstream',move:'Mid (import band): finish-led polymer-hybrid basin mixers under Tk 5,000',seg:'Urban apartments, hotels, hospitals; same monsoon and hard-water conditions as eastern India',cert:'Nepal draft NS covers copper-alloy only (gap); BSTI not mandatory for taps; SLS unclear',adapt:'Minimal; Bengali and Nepali packaging; land-route logistics from the Topline East network'},
+ {n:'South-East Asia (Indonesia, Vietnam, Philippines, Malaysia)',ph:'Phase 2',size:'Philippines USD 270 mn → 473 mn (2034), 6.2%; metal 75% of Philippine faucets, so non-metal is already a quarter',tiers:'Budget under USD 50; mid USD 50–150 (American Standard, Inax); premium above USD 150 (TOTO, GROHE)',poly:'Budget tier, humid-climate utility',move:'Mid USD 50–150: basin mixers for subsidised and mid-market housing',seg:'Subsidised housing (Indonesia\'s programme pivoting to renovation in 2026), coastal and humid cities, economy hotels',cert:'Indonesia SNI 122:2022 (UPC-based; factory audit, 3–6 months); Malaysia SIRIM',adapt:'SNI dossier; humidity and salt-spray data; USD 50–150 price architecture'},
+ {n:'United Kingdom and Europe',ph:'Phase 3 · FY34+',size:'Europe 7.1% CAGR to 2031; Germany USD 3.8 bn by 2031; UK is 3.7% of India\'s HS 8481 exports',tiers:'UK basin mixers from £31 (Valway); GROHE Start £60–213; Hansgrohe Talis £204–252; Vola and Dornbracht luxury',poly:'Leisure and caravan niche (Reich ~£89); not in mainstream retail',move:'Economy-mid £40–120 cloakroom and basin mixers for BTR, student and social housing',seg:'Build-to-rent and student housing (durability, lifetime guarantees, flow limiters), social housing, hard-water regions',cert:'WRAS material (BS 6920) and product approval; EN 817 and EN 200 endurance; KTW-BWGL; EU positive list binding 31 Dec 2026; TMV2 for thermostatic',adapt:'Hot-water cycling and 80°C duty; 0.05% lead in accessible parts (REACH); flow limiters; a WRAS-approved plastic-body precedent to establish'},
+ {n:'USA and Canada',ph:'Phase 3',size:'US USD 6.0 bn (2024) → 9.4 bn (2032), 5.9%; USA takes 26% of India\'s HS 8481 exports',tiers:'Budget USD 30–100 (Glacier Bay, Peerless); mid 100–300 (Moen, Delta, Kohler); premium 300–600 (Brizo, GROHE); luxury 600+',poly:'RV and manufactured housing (ABS lavatory faucet USD 26); big-box has moved to metal bodies',move:'Budget-mid USD 50–150 centerset lavatory faucets for multifamily and economy hotels',seg:'Manufactured housing, multifamily, economy hotel brands, hard-water states',cert:'NSF/ANSI 61 and 372 lead-free; ASME A112.18.1 / CSA B125.1; cUPC listing; WaterSense 1.5 gpm',adapt:'Lead-free brass inserts; 3-hole 4-inch centerset format; 1.2–1.5 gpm aerators; US cartridge sizes'},
+ {n:'Australia and New Zealand',ph:'Phase 3',size:'Australia USD 661 mn → 1,143 mn (2034), 6.3%; non-metal about a third of the market by value (IMARC)',tiers:'Mid AUD 150–350 (Caroma, Methven, Phoenix); premium above',poly:'Plastic taps are listed in the WaterMark schedule; a third of the market is non-metal',move:'Mid AUD 150–350 basin mixers; lead-free rule favours non-copper bodies',seg:'Multi-residential, hard-water regions, aged care',cert:'WaterMark to AS 3718:2021; WELS rating; lead-free (≤0.25%) from 1 May 2026; AS/NZS 4020; NZ recognises WaterMark from Oct 2025',adapt:'WaterMark dossier; 500 kPa and 80°C endurance; lead-free inserts; WELS flow classes'}
+];
+const ROADMAP=[
+ ['FY28–30','India Tier 1 (Telangana, then South, Pune, NCR)','CORE, SAFE, HUE kits; SENSE FY29; ATELIER FY30','IS 9763 / IS 8931, IS 17650-2; GST 18%','Developer phases, young families, replacement','Gate G1 order book; 40 architect specs'],
+ ['FY31–32','India Tier 2 and East (via Topline network)','CORE and SAFE replacement SKUs; HUE inserts online','Same IS marks; dealer-cluster logistics','Growing families, landlords, Tier 2 upgraders','Dealer clusters reordering ≥ 60%'],
+ ['FY32 upside','GCC pilot (UAE, Saudi) and South Africa','Basin mixer and ablution taps; chrome and PVD finishes','GSO water label; SABER + SASO 2655; SANS 1021 / 1808-37','Mass housing, labour accommodation, coastal corrosion, economy hotels','One distributor per market with a label-certified SKU set'],
+ ['FY33+','South Asia and SE Asia','Mid-tier basin mixers under local import bands','BSTI (voluntary), SNI 122 audit, SIRIM','Urban apartments, hotels, humid-climate replacement','SNI factory audit passed; Nepal standards dialogue'],
+ ['FY34+','Australia/NZ, then UK/EU, then US','Lead-free-insert variants; WRAS and NSF 61 variants; centerset formats','WaterMark + WELS; WRAS + EU positive list + EN 817; NSF 61/372 + cUPC + WaterSense','BTR, student and social housing; manufactured and multifamily; economy hotels','Certification dossiers funded by Phase 1–2 cash; a plastic-body precedent per market']
+];
+
+/* ---------- slides ---------- */
+const SLIDES={
+ answer:{h:'Sell the first bathroom of a new life, then the tenth year of an old one.',b:['India faucet demand ₹20,190 Cr; about {REC} is receptive to a finish-led polymer-hybrid line across occasion, tier, building type, tenure and city tier','Most receptive: mid-price new-build apartments, nest-builders and young families, hard-water replacement, elderly and assisted households, ISI-marked institutions','Least receptive: luxury and branded residences (identity-led, brass and PVD provenance); Atelier is a credential only','Decision unit is wider than the buyer: parents involved in 83% of purchases; 97% of renovations led by a professional; plumbers decide replacements','Lifecycle retail revenue reaches {SOM} by FY30 at the plan\'s penetration; the plan implies ~1.5% of Telangana\'s bathroom-fitting occasions in Year 1']},
+ demand:{h:'One market, five cuts: new build 75%, mid-to-premium 43%, residential 68%, owners 85%, Tier 1–2 63%.',b:['New build vs replacement 75/25 for faucets; replacement gaining about a point a year on a 10–12 year renovation cycle','Price tiers (whole market): PTMT and unbranded 40, economy brass 15, mid 21, premium 22, luxury 2; organised mix entry 22 / mid 36 / premium 42 (Cera)','Building type: residential 68, commercial 14, hospitality 8, institutional 10; commercial is the fastest-growing end user (7.6% CAGR)','Tenure: 67/33 owner vs rental by households, roughly 85/15 by fittings spend (landlords buy economy at turnover)','City tier: Tier 1 38, Tier 2 25, Tier 3 37; Tier 3 is PTMT and plumber territory, Tier 2 is premiumising']},
+ lifecycle:{h:'Eight households, eight occasions: nest-builders and elderly retrofit are the most receptive; luxury is the least.',b:['Nest-builders: ≈36 lakh urban weddings a year; HUE and SAFE; sample flat, designer and creators; parents co-decide','First-home families: 5.5 lakh developer units a year; the developer specifies, the family upgrades one notch; Premier kit','Growing families: ≈55 lakh replacement occasions a year; plumber-led; CORE and SAFE; the Reach model\'s volume','Mature upgraders: ≈15 lakh bathroom renovations a year; designer-led; HUE, SENSE; medium receptivity','Retirees and elderly households: ≈5 lakh occasions; SAFE is unclaimed; buyer is often the adult child; landlords: HUE inserts at turnover']},
+ deciders:{h:'Who decides depends on the journey: developer and architect in new build, plumber and contractor in self-build and replacement, family everywhere.',b:['Developer flat: developer specifies (3), procurement and promoter approve (3), family decides only the upgrade, plumbing contractor installs and can substitute','Self-build: owner decides, contractor and plumber shape the purchase, dealer counter is the point of sale','Renovation: 97% hire a professional (contractors 33%, architects 19%, IDs 19%); 63% hire a plumber; leaking taps are the plumber\'s call','Parents and in-laws: involved in 83% of purchases, final call in 19%, veto in 28%; married women name in-laws as primary influencer 44%','Marketing approach per stakeholder: equivalence file for developers, Product Intelligence pack for architects, QR rewards for plumbers, lifecycle cost for facility managers']},
+ touchpoints:{h:'Be present where the home is chosen: sample flats, designers, plumbers and creators, before the showroom.',b:['80% of home shoppers discover products on social media; 57% of 18–28s rely on creators; 55% research online before an offline purchase','Sample flats sell projects on premium finishes; a NuFlow-installed sample flat is a demonstration to the buyer and a spec to the developer','Developer gallery kit: buyer-facing QR passport card, colour swatch board, warranty one-pager','Plumber and contractor recommendation decides replacement; 300 fitters trained with QR rewards for zero-callback installs','Experience centre only in Year 2, after POs; Jaquar (22), Kohler (4) and GROHE (~400) already own that touchpoint']},
+ channels:{h:'Institutional opens, trade scales, non-trade adds institutions, facility managers and contractors.',b:['Institutional: developers, contractors, specifiers; 47% of Year 1; spec-driven, 30% ceiling, warm via BirlaNu','Trade: studios (25% + 4%), BirlaNu dealers (22% + 8%), plumbers (QR), marketplaces (15% cost); 60% of Year 5','Non-trade: framework MoUs, institutions (ISI specs, PTMT accepted), midscale hotels, commercial offices (52 mn sq ft in 2025), facility management, renovation contractors','Highest scores: BirlaNu plumbing dealers, plumbers, institutional buyers and renovation contractors; lowest: commercial real estate and hospitality on brand standards','Rule set from the plan: one price everywhere, discount ceilings, dealers counted after a reorder, online never below street price']},
+ framework:{h:'Six dimensions, twelve clusters: Hyderabad first, Bengaluru and Chennai next, Pune and NCR, then Mumbai, Kolkata and Tier 2.',b:['Customer base and existing presence: BirlaNu references in Hyderabad, Chennai, Pune, NCR; Casagrand, Appaswamy, DLF, M3M, Raheja, Mahindra Lifespaces','Geographical base: MMR 126k launches, Bengaluru 74k, Pune 68k, NCR 62k, Hyderabad 43k (+6% in 2026), Chennai 27k','Distribution reach and logistics: plants at Thimmapur, Hyderabad, Chennai, Kondapalli, Wada, Golan, Faridabad, Jhajjar, Sathariya, Jasidih, Balasore, Cuttack; 53 depots','Institutional opportunity: open specs in Hyderabad and Bengaluru; ISI spec in NCR (Signature Global); PRISM hotels in Telangana and AP','What moves Ahmedabad or Lucknow up: distribution reach and presence, which the Topline network and a Gujarat depot could change']},
+ global:{h:'No market bans a polymer tap; the gates are water labels (GCC), WRAS and the EU positive list, NSF 61/372, and WaterMark lead-free.',b:['India ladder: PTMT ₹282 → Essco ₹2,600 → Jaquar Continental ₹3,460 → Kubix ₹8,070 → GROHE Eurosmart ₹14,100 → Artize ₹66,100; NuFlow runs ₹899–24,999','Phase 1 (FY32 upside): GCC and South Africa; India already ships USD 247 mn of HS 8481 to UAE and Saudi; SA has explicit plastic-tap standards','Phase 2: Bangladesh, Nepal, Sri Lanka, SE Asia; plastic faucets mainstream (PRAN-RFL); SNI audit for Indonesia','Phase 3: Australia/NZ (WaterMark lists plastic taps; lead-free from May 2026), UK/EU (WRAS, EN 817, positive list Dec 2026), US (NSF 61/372, cUPC, WaterSense)','Receptive abroad: mass housing (Sakani, Kenya), labour accommodation, BTR and student housing, manufactured and multifamily, economy hotels, hard-water and coastal regions']},
+ numbers:{h:'{REC} of India\'s faucet demand is receptive; lifecycle retail reaches {SOM} by FY30 at the plan\'s penetration.',b:['Demand cube: ₹20,190 Cr × weighted receptivity by occasion, tier, building, tenure and city tier (independence assumed)','Lifecycle retail = occasions × footprint share × penetration × receptivity × basket, for eight segments','Calibrated to the plan: ₹3.66 Cr retail in FY28 and ₹49.94 Cr in FY32 imply ~1.5% of Telangana occasions in Year 1 and 2.5% across 45% of urban India by Year 5','Biggest levers: footprint share (dealer clusters), penetration in growing-family and nest-builder occasions, and the basket in upgrader renovations','Assumed inputs to challenge first: urban share of occasions, replacement rate per household, basket per segment']},
+ evidence:{h:'Every number carries a tag; assumed inputs are the first to challenge.',b:['Sourced: NSS, Census, PMAY, Anarock, Knight Frank, Colliers, NoBroker, Houzz India, Deloitte, LASI, ASLI-JLL, Cera and Hindware filings, broker notes, WRAS, NSF, ABCB, GSO, SASO, SANS, IMARC, Mordor','Derived: occasions per segment from national proxies; receptive pool from weighted shares; tier shares from Cera\'s mix and the organised share','Assumed: receptivity scores, urban shares, replacement rates, baskets, footprint and penetration by year','Unverified: PTMT consumer perception, plumber influence percentage, bathrooms per BHK, developer upgrade menus, WRAS plastic-body precedent']}
+};
+/* ---------- evidence: [tag, area, fact, source, url] ---------- */
+const EV=[
+ /* market and splits */
+ ['src','Market','Bathware ₹331 bn FY25: faucets ₹202 bn (61%), sanitaryware ₹129 bn; ~10% CAGR to FY29; replacement 20–25% of bathware','Anand Rathi building materials thematic, Mar 2026','https://dsijpub.s3.ap-south-1.amazonaws.com/productAttachment/premarketreports/Building_Materials_Thematic_150326.pdf'],
+ ['src','Market','Faucetware ₹201.9 bn, 60% organised; Jaquar 15–20% share; project demand outperforming retail','PL Capital, Jun 2026','https://plindia.com/ResReport/BuildingMaterial-9-6-26-PL.pdf'],
+ ['src','Occasion','Sanitaryware replacement demand 8% (FY14) → 12% (FY16) → 15% (FY18); faucets retail 70% / institutional 30%; faucet replacement more than twice institutional','Nirmal Bang, Cera initiation, Sep 2018','https://www.nirmalbang.com/Upload/Cera%20Sanitaryware%20-%20Initiating%20Coverage-28%20September%202018.pdf'],
+ ['src','Occasion','Home improvement ₹3 lakh Cr (2025) → ₹4 lakh Cr by 2030; owners renovate every 10–12 years','Alvarez & Marsal, May 2025','https://www.alvarezandmarsal.com/press-release/india-s-home-improvement-boom-from-repair-to-reimagination'],
+ ['src','Occasion','36% of owners renovated in 2017, median ₹3 lakh; master bathroom 28%, kitchen 33%','Houzz India 2018 (n=2,997)','https://www.houzz.in/magazine/2018-india-houzz-and-home-renovation-trends-study-stsetivw-vs~111576340'],
+ ['src','Occasion','Rooms renovated: kitchen 33%, living 28%, guest bath 27%, master bath 25%; average 3 rooms per project','Houzz India 2019','https://www.houzz.in/magazine/2019-india-houzz-and-home-renovation-trends-study-stsetivw-vs~126332852'],
+ ['src','Occasion','Home interiors ₹1.27 lakh Cr (2024) → ₹2.75 lakh Cr (2030); 82% of Tier 2 interiors demand from resale homes; Tier 2 spend ₹3.9 lakh a home, 74% of Tier 1','Magicbricks via Business Standard, Dec 2025','https://www.business-standard.com/finance/personal-finance/3-9-lakh-home-tier-2-spend-hits-74-of-metro-levels-in-home-interiors-mkt-125120900510_1.html'],
+ ['src','Price tier','Cera price mix: premium 42% / mid 36% / entry 22% (Q2 FY26); 43 / 37 / 20 (Q2 FY27); tier mix Tier 1 36% / Tier 2 23% / Tier 3 41%','Cera Q2 FY26 earnings call; Cera release Nov 2026','https://www.cera-india.com/sites/default/files/2025-11/Q2%20FY%202025-26%20Earnings%20Call%20Transcript.pdf'],
+ ['src','Price tier','Sanitaryware value tiers FY18: economy 40%, mid and premium 45%, luxury 15%; faucets organised 50% by value (FY18)','Nirmal Bang, Sep 2018','https://www.nirmalbang.com/Upload/Cera%20Sanitaryware%20-%20Initiating%20Coverage-28%20September%202018.pdf'],
+ ['src','Price tier','Bath fittings 58% organised in 2025; organised growing 8.6% a year','Mordor via GII','https://www.giiresearch.com/report/moi2066530-india-bath-fittings-market-share-analysis-industry.html'],
+ ['src','Price tier','201.6 mn bath-fitting pieces sold in 2025; local players 70% of 145 companies','Ken Research','https://www.kenresearch.com/industry-reports/india-bath-fittings-and-accessories-market'],
+ ['src','Price tier','Luxury bath fixtures USD 290 mn (2025) → USD 442 mn (2034)','IMARC','https://www.imarcgroup.com/india-luxury-bath-fixtures-market'],
+ ['src','Price tier','Kohler India ~USD 230 mn FY24, 17% CAGR since 2019; homes above ₹1.5 Cr 26% of residential sales in 2024','Reuters via Malay Mail, Jan 2025','https://www.malaymail.com/news/life/2025/01/22/sitting-pretty-indias-wealthy-splurge-on-bathroom-luxury-with-us18500-smart-toilets-and-designer-fittings/164222'],
+ ['der','Price tier','Whole-market tiers: PTMT and unbranded 40, economy brass 15, mid 21, premium 22, luxury 2 = Cera mix applied to the 58–60% organised share','Calculated','#'],
+ ['src','Income','ICE 360 classes: aspirers ₹1.25–5 L, seekers ₹5–15 L, strivers ₹15–30 L, near-rich ₹30–50 L; middle class 43.2 crore people (2021) → 102 crore (2047)','PRICE via ThePrint','https://theprint.in/india/middle-class-set-to-boom-in-india-avg-household-income-to-be-rs-20l-year-by-2047-finds-price-survey/1657450'],
+ ['src','Income','Affluent Indians 60 mn (2023) → 100 mn (2027)','Goldman Sachs','https://www.goldmansachs.com/insights/articles/indias-affluent-population-is-likely-to-hit-100-million-by-2027'],
+ ['src','Building type','Faucets: residential 67.65% of revenue; commercial fastest-growing end user at 7.6% CAGR; South 34%','Mordor Intelligence, India faucet market','https://www.mordorintelligence.com/industry-reports/india-faucet-market'],
+ ['src','Building type','Office completions in top 7 cities 2025: 52 mn sq ft; Hyderabad ~8.8 mn','Anarock office annual update 2025','https://websitemedia.anarock.com/media/India_Office_Market_Annual_Update_2025_bec8b7647a.pdf'],
+ ['src','Building type','18 hospital chains to add 34,000+ beds FY26–FY30, ₹40,000 Cr capex','ICRA, Feb 2026','https://www.icra.in/Research/ViewResearchReport/private-sector-investments-driving-capacity-growth-outlay-of-rs-40-000-crore-seen-over-fy2026-to-fy2030-towards-34-000-bed-additions/6779'],
+ ['ass','Building type','Sub-split commercial 14 / hospitality 8 / institutional 10 of the non-residential 32%','Analyst split; no published sub-shares','#'],
+ ['src','Tenure','Urban households owning their dwelling 63.8%, rural 96.0% (NSS 2018)','NSS 76th round via Business Standard','https://business-standard.com/article/news-ani/96-0-pc-in-rural-63-8-pc-urban-area-households-have-their-own-dwelling-unit-nss-119112400868_1.html'],
+ ['src','Tenure','Census 2011: 27.5% of urban households rented (21.7 mn); Karnataka 46%, Andhra Pradesh 44%, Tamil Nadu 40%','Knight Frank rental report 2019','https://content.knightfrank.com/research/1004/documents/en/india-topical-reports-institutionalising-the-rental-housing-market-in-india-2019-6718.pdf'],
+ ['src','Tenure','Organised co-living ~0.3 mn beds (2025) → 1 mn by 2030; demand 6.6 mn beds','Colliers via Tribune, May 2025','https://www.tribuneindia.com/news/business/indias-co-living-market-inventory-set-at-1-million-beds-by-2030-colliers'],
+ ['src','Tenure','Model Tenancy Act: tenant bears routine fixture upkeep, landlord major repairs; only a few states aligned','Business Today, Jun 2026; Housing.com','https://www.businesstoday.in/personal-finance/real-estate/story/bt-explainer-tenant-or-landlord-who-bears-repair-costs-in-a-rented-home-537429-2026-06-17'],
+ ['ass','Tenure','Fittings spend split owner 85 / rental 15 (landlords buy economy at turnover, tenants only upkeep)','Analyst assumption from tenure and MTA rules','#'],
+ ['src','City tier','Luxury fittings by region: North ~32%, West ~29%, South ~24%, East ~10%','Credence Research','https://www.credenceresearch.com/report/india-luxury-fittings-market'],
+ /* lifecycle */
+ ['src','Lifecycle','About 1 crore weddings a year (industry estimate); 46 lakh in the Nov–Dec 2025 season','IBEF; CAIT, Oct 2025','https://cait.in//images/press-release/pdf_1762754341.pdf'],
+ ['src','Lifecycle','2.52 crore registered births in 2023','Civil Registration System 2023','https://www.drishtiias.com/daily-updates/daily-news-analysis/indias-vital-statistics-report-2023/print_manually'],
+ ['src','Lifecycle','Nuclear households 52.3% of urban households (42.1 mn) in 2011, growing 3.4% a year','Census 2011 via Business Standard','https://business-standard.com/article/economy-policy/data-tracker-is-nuclearisation-in-urban-india-on-the-decline-117070600333_1.html'],
+ ['src','Lifecycle','Buyer motives: upgrade 37%, first-time end use 32%, investment 25%, retirement or second home 7% (n=1,629, 8 cities)','Knight Frank Beyond Bricks 2025','https://content.knightfrank.com/research/2999/documents/en/beyond-bricks-the-pulse-of-home-buying-2025-12177.pdf'],
+ ['src','Lifecycle','H1 2026: 68% self-use; 3BHK 48%, 2BHK 38%; ₹90 L–1.5 Cr 34%, above ₹1.5 Cr 27%; 31% considering renting','Anarock consumer sentiment via Business Today, Sep 2026','https://businesstoday.in/real-estate/story/homebuyers-prefer-3bhks-rs90-lakh-rs1-5-crore-homes-as-demand-for-larger-houses-rises-report-556098-2026-09-17'],
+ ['src','Lifecycle','51% self-use, 16% second or vacation home; under-30s rate wellness amenities about twice the average','Colliers homebuying sentiment 2026','https://theprint.in/ani-press-releases/colliers-homebuying-sentiment-survey-2026-around-50-of-prospective-homebuyers-are-likely-to-purchase-a-house-within-2-years/3048388/'],
+ ['src','Lifecycle','64% of first-time buyers are under 35','NoBroker via Inshorts, Mar 2026','https://inshorts.com/en/news/64--of-homebuyers-in-india-under-35-years--b-luru-in-lead--report-1774358045200'],
+ ['src','Lifecycle','Average first-time buyer age fell from early 40s to early 30s; Gen Z 35% link home improvement to self-expression; personas practical 39%, lifestyle curators 34%, smart-living 21%, continuous upgraders 6%','Deloitte The Home Reset via Business Today, Sep 2026','https://www.businesstoday.in/real-estate/story/gen-z-is-influencing-indias-home-market-35-link-home-improvement-with-self-expression-558597-2026-09-30'],
+ ['src','Lifecycle','60+ living arrangements: 5.7% alone, 20.3% with spouse only, 40.6% with spouse and children, 27.6% with children only','LASI Wave 1 factsheet','https://www.iipsindia.ac.in/sites/default/files/other_files/LASI_W1_Factsheet_INDIA.pdf'],
+ ['src','Lifecycle','Senior living: 22,157 organised units (Jun 2025), +14,900 by 2030; demand 1.7 mn units; 60+ population 162 mn (2025) → 191.5 mn (2030)','ASLI-JLL via Construction World, Aug 2025','https://www.constructionworld.in/latest-construction-news/real-estate-news/senior-homes-to-hit-15-000-units-by-2030--asli-jll/78128'],
+ ['src','Lifecycle','Purchase intent index: 75+ age group 167 and 18–24 age group 164, the two highest','Magicbricks via Tribune, Apr 2025','https://www.tribuneindia.com/news/business/young-professionals-senior-citizens-demonstrate-strong-intent-to-purchase-real-estate-magicbricks-survey'],
+ ['der','Lifecycle','Occasions per year by segment: nest-builders 36 lakh, first-home upgrades 3.6 lakh, growing-family replacements 55 lakh, upgrader renovations 15 lakh, retirees 0.8 lakh, elderly retrofits 4.5 lakh, luxury 0.6 lakh, rental refresh 11 lakh','Calculated from the proxies listed in each segment card','#'],
+ ['ass','Lifecycle','Baskets per occasion (₹1,500 to ₹60,000) and receptivity multipliers per segment','Analyst assumption anchored to NuFlow MRPs and kit prices','#'],
+ /* decision makers */
+ ['src','Decision-makers','83% say parents were meaningfully involved; 19% parents made the final decision; 28% had a veto; married women name in-laws as primary influencer 44% (n=1,247)','Ghar.tv Parents\' Veto Index, Mar 2026','https://www.ghar.tv/blog/the-parents-veto-index-2026-indias-first-dual-lens-study-on-parental-influence-in-home-buying/artid6048'],
+ ['src','Decision-makers','69% of women buyers are end users; 52% target homes above ₹90 L','Anarock via RealtyNMore, Feb 2025','https://realtynmore.com/31-women-buy-homes-for-investment-69-are-end-users-says-anarock-survey/'],
+ ['src','Decision-makers','Renovators: 97–98% hire a professional; contractors 33%, architects 19%, interior designers 19%; plumbers hired by 63%','Houzz India via RealtyNMore','https://realtynmore.com/houzz-india-survey-reveals-top-home-renovation-trends/'],
+ ['src','Decision-makers','Premium developers pre-specify Jaquar Continental or Hindware; buyer upgrades one notch at ₹1.5–3 lakh a bathroom through a fixed menu','Studio Matrx premium apartment guide','https://www.studiomatrx.org/guides/premium-apartment-interiors'],
+ ['src','Decision-makers','Contractors may substitute generics for specified brands; CP fittings are 15–20% of a bathroom budget','Studio Matrx bathroom shopping guide','https://www.studiomatrx.org/guides/bathroom-shopping-guide-india'],
+ ['src','Decision-makers','UHNI buyers of branded residences prefer blank-canvas shells and redo bathrooms','GRI Institute, 2026','https://news.griinstitute.org/en/real-estate/india-branded-residences-2026-the-blank-canvas-paradox'],
+ ['src','Decision-makers','Godrej customisation FAQ lists flooring, electrical and kitchen changes, no fittings upgrade menu','Godrej Vanantara','https://www.godrejvanantara.com/floor-plans/can-you-customize-apartments.html'],
+ ['ass','Decision-makers','Influence scores (0–3) by stakeholder, stage and journey','Analyst judgement informed by the sources above','#'],
+ ['unv','Decision-makers','No Indian survey quantifies plumber influence on faucet brand choice','Not published','#'],
+ /* touchpoints */
+ ['src','Touchpoints','80% of home shoppers discover products on social media; 57% of 18–28s rely on creators vs 27% of 45–60s','Deloitte via Apparel Resources, Sep 2026','https://apparelresources.com/business-news/retail/80-indian-home-shoppers-explore-products-social-media-report/'],
+ ['src','Touchpoints','55% of urban offline home-décor shoppers research online first (n=6,600)','Google-Ipsos via exchange4media, 2019','https://www.exchange4media.com/digital-news/urban-indian-shoppers-rely-on-online-research-even-for-offline-purchases-google-study-101027.html'],
+ ['src','Touchpoints','Sample flats are fitted with premium finishes to sell the project; delivered flats can differ','Housing.com','https://housing.com/news/should-you-buy-a-sample-flat-shown-by-the-developer/'],
+ ['src','Touchpoints','Jaquar runs 22 centres (7 Jaquar World, 15 Orientation Centres); Kohler three experience centres','Jaquar; Retail4Growth','https://www.jaquar.com/india-oc-website'],
+ ['src','Touchpoints','Luxury buyers weigh warranty, water efficiency and after-sales with finish; water-efficient fitting adoption up ~45% since 2021','Business Standard, Jan 2026','https://www.business-standard.com/finance/personal-finance/why-indians-are-investing-in-luxury-bathrooms-126012901187_1.html'],
+ ['src','Touchpoints','Finish palette widening to nickel, rose gold, black, bronze; matte finishes; 4–6 LPM project basins','Architect & Interiors India, Aug 2025','https://www.bindugopalrao.com/wp-content/uploads/2025/08/52-57_AI_-August_-2025_Special-Feature-Faucets.pdf'],
+ /* polymer */
+ ['src','Polymer','Truflo by Hindware PTMT faucets from Jan 2023, citing Tier 2–3 growth and nuclear families','ThePrint / ANI','https://theprint.in/ani-press-releases/truflo-by-hindware-forays-into-ptmt-faucets-and-accessories-commences-commercial-production-from-its-second-state-of-the-art-plant/1326050'],
+ ['src','Polymer','PTMT framed as budget and corrosion-resistant vs brass as luxury; used in schools, hospitals and government buildings (manufacturer claims)','Prayag','https://prayagindia.com/ptmt-vs-brass'],
+ ['src','Polymer','Skipper and Prince Pipes run PTMT catalogues through pipe channels','Skipper; Prince Pipes','https://www.skipperlimited.com/water/ptmt-bath-fittings/13'],
+ ['unv','Polymer','No consumer survey on PTMT perception found; receptivity scores are judgement','Not published','#'],
+ /* price ladder */
+ ['src','Price ladder','PTMT pillar cock (Ruhe Indigo) MRP ₹282','Ruhe India','https://ruheindia.com/products/indigo-ptmt-pillar-cock-faucet-by-ruhe-%C2%AE'],
+ ['src','Price ladder','Cera Garnet pillar cock ₹867','McCoy Mart','https://mccoymart.com/buy/cera-quarter-turn-faucets-garnet-pillar-cock-with-aerator'],
+ ['src','Price ladder','Jaquar Continental Prime SL basin mixer MRP ₹3,460; Kubix Prime ₹8,070; Hindware Element ₹5,300; Kohler July ₹5,720; Essco Orbit ₹2,600','Chabsons listings, Nov 2026','https://www.chabsons.com/collections/faucet-table-mounted/products/s-l-basin-mixer-w-o-pop-up-waste-jaquar-faucets-chrome-continental-prime-0x15-mm-0inchx0-6inch'],
+ ['src','Price ladder','GROHE Eurosmart 2021 ₹14,100; Essence S ₹34,100; Allure M ₹91,200; Artize Tiaara ₹66,100','Chabsons listings, Nov 2026','https://www.chabsons.com/collections/artize-faucet/products/s-l-basin-mixer-w-o-popup-w-pipes-450mm-artize-faucet-chrome-tiara-0x15-mm-0inchx0-6inch'],
+ ['src','Price ladder','NuFlow MRPs: CORE bib tap ₹1,299; HUE basin mixer ₹4,999; SENSE sensor ₹12,999; ATELIER tall mixer ₹14,999','NuFlow GTM plan (team document, Nov 2026)','#'],
+ /* global */
+ ['src','Global','WRAS tests non-metallic materials to BS 6920; plastic-bodied taps sold in UK leisure (Reich ~£89)','WRAS; Towsure','https://wrasapprovals.co.uk/material-approvals'],
+ ['src','Global','EN 200 is not harmonised; EU drinking-water positive list binding 31 Dec 2026; national approvals valid to 2032','Compliance Gate; H2O Register','https://h2oregister.freshdesk.com/support/solutions/articles/44002682404-executive-summary'],
+ ['src','Global','EN 817:2024 mechanical mixing valves; KTW-BWGL hygiene for plastics in drinking water (Germany)','Genorma; Kiwa','https://genorma.com/en/standards/en-817-2024'],
+ ['src','Global','NSF/ANSI 61 Section 9 tests plastic parts; NSF/ANSI 372 0.25% lead; ASME A112.18.1 / CSA B125.1','WaterWorld / NSF','https://www.waterworld.com/residential-commercial/article/14308803/nsf-international-faucet-foundations'],
+ ['src','Global','WaterSense lavatory faucets max 1.5 gpm','US EPA','https://epa.gov/watersense/bathroom-faucets'],
+ ['src','Global','WaterMark schedule lists metallic and plastic taps under AS 3718:2021; lead-free from 1 May 2026; NZ recognises WaterMark tapware from 1 Oct 2025','ABCB; MBIE','https://cpd.nccb.gov.au/schedule-products-tapware'],
+ ['src','Global','GCC water-efficiency regulation for taps (GSO-WER) from 2024; Qatar Green Label mandatory from 24 Feb 2026; Saudi SABER + SASO EN 246 and SASO 2655 label','SGS; Qatar Tribune; Intertek','https://www.sgs.com/en-kw/news/2024/01/water-efficiency-labels-introduced-for-water-fixtures-products-across-the-gulf-region'],
+ ['src','Global','South Africa: SANS 1021 (plastic separate-control taps) and SANS 1808-37 (plastic single-lever mixers)','CLASP gap analysis','https://www.clasp.ngo/wp-content/uploads/2022/03/Final-South-African-Tap-and-Flow-Rate-Gap-Analysis-Report-CLASP.pdf'],
+ ['src','Global','Nepal draft tap standard covers copper-alloy only; Bangladesh BSTI list excludes taps; Indonesia SNI 122:2022 in transition','NBSM; TÜV; luxuryhomefaucet','https://nbsm.gov.np/noticefiles/COPPER-ALLOY-SINGLE-TAPS-DRAFT-3-11-1782801207.pdf'],
+ ['src','Global','Global faucets USD 33.0 bn (2025) → 59.3 bn (2034); Saudi USD 307 mn; South Africa USD 148 mn; Philippines USD 270 mn; Australia USD 661 mn','IMARC','https://www.imarcgroup.com/faucet-market-statistics'],
+ ['src','Global','US faucets USD 6.02 bn (2024) → 9.38 bn (2032)','Fortune Business Insights','https://www.fortunebusinessinsights.com/amp/u-s-faucet-market-109161'],
+ ['src','Global','India HS 8481 exports USD 2.11 bn (2023); HS 848180 USD 1.08 bn; USA 26%, UAE 7%, Saudi 4.7%, UK 3.7%','TrendEconomy','https://trendeconomy.com/data/h2/India/8481'],
+ ['src','Global','UK basin mixers from £31; GROHE Start £60–213; Hansgrohe Talis £204–252','PriceSpy UK','https://pricespy.co.uk/c/basin-mixers'],
+ ['src','Global','US tiers: budget USD 30–100, mid 100–300, premium 300–600, luxury 600+; ABS RV lavatory faucet USD 25.95; Home Depot lists no plastic Glacier Bay faucets','Plumbing Directory; Walmart; Home Depot','https://theplumbingdirectory-resources.pages.dev/faucets/cost/typical-faucet-price-ranges'],
+ ['src','Global','Bangladesh taps above Tk 1,500 Cr, ~15% a year; local Tk 20–500, imports Tk 500–5,000; PRAN-RFL started from plastic','The Business Standard (BD)','https://www.tbsnews.net/node/510118'],
+ ['src','Global','Saudi Sakani moved 48,000+ families into first homes in H1 2025','Argaam','https://www.argaam.com/en/article/articledetail/id/1832782'],
+ ['src','Global','UK build-to-rent fittings sold on durability, lifetime guarantees and flow limiters','Bristan','https://www.bristan.com/specifiers-home/bristan-bulletin/build-to-rent'],
+ ['unv','Global','No WRAS-approved plastic-body basin mixer precedent found outside leisure taps; Sri Lanka SLS and KEBS tap standards unconfirmed','Not found','#'],
+ /* model */
+ ['der','Model','Receptive pool = ₹20,190 Cr × Σ(share × receptivity) for each of five dimensions, multiplied (independence assumed); base ≈ 22% ≈ ₹4,470 Cr','Calculated','#'],
+ ['der','Model','Plan retail channels: studios ₹1.96 + dealers ₹1.09 + D2C ₹0.61 = ₹3.66 Cr (FY28); ₹29.68 + ₹10.50 + ₹9.76 = ₹49.94 Cr (FY32)','NuFlow GTM plan','#'],
+ ['ass','Model','Footprint share of national occasions 3% (FY28) → 30% (FY32); penetration 1.35% of receptive occasions in footprint; occasion value growth 8% a year from FY26','Analyst assumption, calibrated to the plan','#']
+];
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const fmt=(n,d=0)=>Number(n).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+const cr=(n)=>'₹'+(n>=100?fmt(n,0):n>=10?fmt(n,1):fmt(n,2))+' Cr';
+const TAGN={src:'sourced',der:'derived',ass:'assumed',unv:'unverified'};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const nice=(max)=>{const step=max/4,p=Math.pow(10,Math.floor(Math.log10(step))),n=step/p;const pick=[1,1.5,2,2.5,3,4,5,6,8,10].find(v=>v>=n-1e-9);return pick*p*4};
+const SCOL=['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--f3)','var(--f1)','var(--neutral)','var(--t-ass)'];
+
+/* ---------- state ---------- */
+const PLAN_RETAIL=[3.66,null,null,null,49.94];
+function baseState(){
+  const st={market:20190,mgrowth:10,share:{},rec:{},seg:{},fp:[3,9,16,23,30],pen:1.35,g:8};
+  DIMS.forEach(d=>d.cats.forEach(c=>{st.share[d.k+'.'+c[0]]=c[2];st.rec[d.k+'.'+c[0]]=c[3]}));
+  SEGS.forEach(s=>st.seg[s.id]={occ:s.occ,basket:s.basket,rec:s.rec});
+  return st;
+}
+const BASE=baseState();
+let S=JSON.parse(JSON.stringify(BASE));
+const PRESETS={
+  low:{fp:[3,7,12,17,22],pen:1.0,g:6,recAdj:-0.1},
+  base:{fp:[3,9,16,23,30],pen:1.35,g:8,recAdj:0},
+  high:{fp:[4,11,20,28,36],pen:1.7,g:10,recAdj:0.05}};
+
+/* ---------- models ---------- */
+function dimFactor(st,d){
+  const tot=d.cats.reduce((a,c)=>a+st.share[d.k+'.'+c[0]],0)||1;
+  return d.cats.reduce((a,c)=>a+st.share[d.k+'.'+c[0]]/tot*st.rec[d.k+'.'+c[0]],0);
+}
+function cube(st){
+  const f=DIMS.map(d=>dimFactor(st,d));
+  const prod=f.reduce((a,b)=>a*b,1);
+  return {f,prod,rec:st.market*prod};
+}
+function life(st){
+  const yrs=[0,1,2,3,4].map(i=>{
+    const grow=Math.pow(1+st.g/100,i+2);
+    const by={};let t=0;
+    SEGS.forEach(s=>{const v=st.seg[s.id];const r=v.occ*grow*(st.fp[i]/100)*(st.pen/100)*v.rec*v.basket/1e7;by[s.id]=r;t+=r});
+    return {by,t};
+  });
+  return yrs;
+}
+
+/* ---------- tooltip ---------- */
+const tip=$('#tip');
+document.addEventListener('mousemove',e=>{
+  const t=e.target.closest&&e.target.closest('[data-tip]');
+  if(!t){tip.style.opacity=0;return}
+  tip.textContent=t.getAttribute('data-tip');tip.style.opacity=1;
+  const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8),y=e.clientY+16;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+});
+document.addEventListener('focusin',e=>{const t=e.target.closest&&e.target.closest('[data-tip]');if(t){const r=t.getBoundingClientRect();tip.textContent=t.getAttribute('data-tip');tip.style.opacity=1;tip.style.left=r.left+'px';tip.style.top=(r.bottom+6)+'px'}});
+document.addEventListener('focusout',()=>{tip.style.opacity=0});
+
+/* ---------- routing ---------- */
+const VIEWS=['answer','demand','lifecycle','deciders','touchpoints','channels','framework','global','numbers','evidence'];
+function route(){
+  let h=location.hash.slice(1);if(!VIEWS.includes(h))h='answer';
+  VIEWS.forEach(v=>{$('#v-'+v).hidden=v!==h;const a=$('#t-'+v);if(v===h)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  window.scrollTo(0,0);
+  try{const a=$('#t-'+h);a&&a.scrollIntoView({block:'nearest',inline:'nearest'})}catch(e){}
+}
+addEventListener('hashchange',route);
+
+/* ---------- slides ---------- */
+function slideText(k){
+  const c=cube(BASE),l=life(BASE);
+  const sub=s=>s.replace(/\{REC\}/g,cr(c.rec)+' ('+fmt(c.prod*100)+'%)').replace(/\{SOM\}/g,cr(l[2].t));
+  const s=SLIDES[k];return {h:sub(s.h),b:s.b.map(sub)};
+}
+function mountSlides(){
+  document.querySelectorAll('.slide').forEach(el=>{
+    const s=slideText(el.dataset.slide);
+    el.innerHTML=`<div><span class="eyebrow">Slide headline</span><b>${esc(s.h)}</b></div><button class="btn" type="button">Copy slide notes</button>`;
+    const btn=$('button',el);
+    btn.addEventListener('click',async()=>{
+      const txt=s.h+'\n\n'+s.b.map(x=>'• '+x).join('\n')+'\n\nSource: NuFlow Lifecycle & Demand Explorer, Nov 2026 (see Evidence tab)';
+      let ok=false;try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
+      if(ok){btn.textContent='Copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Copy slide notes';btn.classList.remove('ok')},1800)}
+      else{let box=$('.copybox',el);if(!box){box=document.createElement('div');box.className='copybox';box.innerHTML='<p class="note" style="margin-bottom:6px">Clipboard is blocked here. Select and copy the text below.</p><textarea readonly></textarea>';el.appendChild(box)}
+        const ta=$('textarea',box);ta.value=txt;ta.focus();ta.select()}
+    });
+  });
+}
+
+/* ---------- answer ---------- */
+function renderAnswer(){
+  const c=cube(BASE),l=life(BASE);
+  $('#k-rec').innerHTML=`${fmt(c.rec)}<small>₹ Cr · ${fmt(c.prod*100)}%</small>`;
+  $('#k-som').innerHTML=`${fmt(l[2].t,1)}<small>₹ Cr</small>`;
+  const items=[
+   `<b>Demand is mostly new build, but replacement is the fastest-growing slice.</b> About 75% of faucet value enters through new construction and 25% through replacement and renovation; sanitaryware replacement rose from 8% to 15% in four years, and owners now renovate every 10–12 years. New build is reached through specification; replacement through the plumber.`,
+   `<b>About ${fmt(c.prod*100)}% of India's ₹20,190 Cr faucet demand (${cr(c.rec)}) is receptive to a finish-led polymer-hybrid line</b> once each Module F dimension is weighted: mid-price new-build apartments, owner-occupied homes and Tier 1–2 cities score high; the PTMT and unbranded tier (40% of value) and luxury score low, for opposite reasons.`,
+   `<b>Upgraders outnumber first-time buyers.</b> Knight Frank finds 37% of buyers upgrading against 32% buying a first home; Anarock's H1 2026 survey shows 48% want a 3BHK and 34% budget ₹90 L–1.5 Cr. First-time buyers are getting younger (64% under 35; average age down from early 40s to early 30s), and they decide with parents: 83% say parents were involved.`,
+   `<b>The most receptive households are at the two ends of the life cycle.</b> Nest-builders (≈1 crore weddings a year) buy on look and colour without a brand habit; elderly households (26% of over-60s live alone or with a spouse only) need safe, easy fittings bought by an adult child. Neither segment has an incumbent that owns it.`,
+   `<b>The family decides less than it thinks in a new flat.</b> Developers pre-specify Jaquar Continental or Hindware and offer a one-notch upgrade at ₹1.5–3 lakh a bathroom. In renovation, 97% of owners hire a professional and 63% hire a plumber. The first interaction is a sample flat, a designer or a plumber, not a showroom.`,
+   `<b>A third of urban households rent.</b> Landlords buy economy fittings at turnover and tenants pay for routine upkeep under the Model Tenancy Act; renting is 44–46% of urban households in Andhra Pradesh and Karnataka. HUE inserts and CORE are the rental products; organised co-living (0.3 mn beds) is a spec sale.`,
+   `<b>Lifecycle retail revenue of ${cr(l[2].t)} in FY30</b> matches the plan's studio, dealer and D2C path (₹3.66 Cr FY28 to ₹49.9 Cr FY32) if the footprint grows from 3% to 30% of India's receptive occasions and converts about 1.35% of them. Growing-family replacements and nest-builders carry most of it; luxury carries almost none.`,
+   `<b>No country bans a polymer tap.</b> The gates are water labels in the GCC, SANS plastic-tap standards in South Africa, WRAS plus the EU positive list (binding 31 Dec 2026), NSF 61/372 in the US, and WaterMark with lead-free inserts in Australia. GCC and South Africa are the first export step; the US and EU need certification dossiers first.`];
+  $('#finds').innerHTML=items.map(i=>`<li><div>${i}</div></li>`).join('');
+}
+
+/* ---------- demand ---------- */
+function renderDims(){
+  $('#dims').innerHTML=DIMS.map((d,di)=>{
+    const tot=d.cats.reduce((a,c)=>a+S.share[d.k+'.'+c[0]],0)||1;
+    const f=dimFactor(S,d);
+    return `<div class="dim"><div class="dl"><b>${d.name} <span style="font-weight:400;color:var(--ink2);font-size:12.5px">· ${esc(d.q)}</span></b><span>weighted receptivity ${fmt(f*100)}%</span></div>
+    <div class="bar3">${d.cats.map((c,j)=>{const sh=S.share[d.k+'.'+c[0]]/tot,rec=S.rec[d.k+'.'+c[0]];return `<i style="flex:${Math.max(sh,0.001)};background:${SCOL[j]};opacity:${0.45+0.55*rec}" tabindex="0" data-tip="${esc(c[1])}: ${fmt(sh*100)}% of value (${cr(sh*S.market)}); receptivity ${RECEPT_LABEL(rec)} (${fmt(rec*100)}%)">${sh>0.09?fmt(sh*100)+'%':''}</i>`}).join('')}</div>
+    <div class="legend" style="margin-top:2px">${d.cats.map((c,j)=>`<span><i style="background:${SCOL[j]}"></i>${esc(c[1])} · ${RECEPT_LABEL(S.rec[d.k+'.'+c[0]])}</span>`).join('')}</div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:2px">Source: ${esc(d.src)}</p></div>`}).join('');
+  $('#whytab').innerHTML='<tr><th>Category</th><th class="n">Share</th><th class="n">Receptivity</th><th>Why</th></tr>'+DIMS.map(d=>{
+    const tot=d.cats.reduce((a,c)=>a+S.share[d.k+'.'+c[0]],0)||1;
+    return `<tr><td colspan="4" style="background:var(--surface2);font-weight:600">${d.name}</td></tr>`+d.cats.map(c=>`<tr><td><b>${esc(c[1])}</b><i class="tag ${c[5]}">${TAGN[c[5]]}</i></td><td class="n">${fmt(S.share[d.k+'.'+c[0]]/tot*100)}%</td><td class="n">${fmt(S.rec[d.k+'.'+c[0]]*100)}%</td><td>${esc(c[4])}</td></tr>`).join('')}).join('');
+}
+let cubeA='tier',cubeB='bld';
+function mountCube(){
+  const mk=(id,cur,set)=>{$(id).innerHTML=DIMS.map(d=>`<button class="chip" data-d="${d.k}" aria-pressed="${d.k===cur}">${d.name}</button>`).join('');
+    $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;set(b.dataset.d);[...$(id).children].forEach(x=>x.setAttribute('aria-pressed',x===b));renderCube()})};
+  mk('#cube-a',cubeA,v=>cubeA=v);mk('#cube-b',cubeB,v=>cubeB=v);
+}
+function renderCube(){
+  const A=DIMS.find(d=>d.k===cubeA),B=DIMS.find(d=>d.k===cubeB);
+  if(A===B){$('#cube').innerHTML='<p class="note">Pick two different dimensions.</p>';return}
+  const ta=A.cats.reduce((a,c)=>a+S.share[A.k+'.'+c[0]],0)||1,tb=B.cats.reduce((a,c)=>a+S.share[B.k+'.'+c[0]],0)||1;
+  let o=`<div class="hh"></div>`+B.cats.map(c=>`<div class="hh">${esc(c[1].split(' (')[0])}</div>`).join('');
+  A.cats.forEach(a=>{o+=`<div class="hr">${esc(a[1].split(' (')[0])}</div>`;B.cats.forEach(b=>{
+    const v=S.market*(S.share[A.k+'.'+a[0]]/ta)*(S.share[B.k+'.'+b[0]]/tb),r=S.rec[A.k+'.'+a[0]]*S.rec[B.k+'.'+b[0]];
+    const cl=r>=0.65?'r3':r>=0.45?'r2':r>=0.25?'r1':'r0';
+    o+=`<div class="mc ${cl}" tabindex="0" data-tip="${esc(a[1])} × ${esc(b[1])}: ${cr(v)}; combined receptivity ${fmt(r*100)}%">${fmt(v)}<small>${fmt(r*100)}%</small></div>`})});
+  $('#cube').style.gridTemplateColumns=`minmax(100px,1.3fr) repeat(${B.cats.length},minmax(64px,1fr))`;
+  $('#cube').innerHTML=o;
+}
+
+/* ---------- lifecycle ---------- */
+function mountLifeWeights(){
+  $('#lw').innerHTML=LWCFG.map(c=>`<label class="sl" for="${c[0]}"><span>${c[1]}</span><input type="range" id="${c[0]}" min="0" max="50" step="5" value="${c[2]}"><output id="o_${c[0]}">${c[2]}</output></label>`).join('');
+  LWCFG.forEach(c=>$('#'+c[0]).addEventListener('input',e=>{LW[c[0]]=+e.target.value;$('#o_'+c[0]).textContent=e.target.value;renderSegs()}));
+}
+function renderSegs(){
+  const tw=LW.lv+LW.lb+LW.lr+LW.la+LW.lt||1;
+  const l=life(S);
+  const list=SEGS.map(s=>({s,sc:((s.sc[0]*LW.lv+s.sc[1]*LW.lb+s.sc[2]*LW.lr+s.sc[3]*LW.la+s.sc[4]*LW.lt)/tw)/5*100})).sort((a,b)=>b.sc-a.sc);
+  $('#seglist').innerHTML=list.map((x,i)=>{const s=x.s,v=S.seg[s.id];return `<article class="seg"><div class="ic">${i+1}<small>${fmt(x.sc)}/100</small></div><div>
+   <h3 style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${esc(s.n)}<span class="pill ${s.sc[2]>=5?'open':s.sc[2]>=3?'ref':'fixed'}">Receptivity: ${s.sc[2]>=5?'high':s.sc[2]>=3?'medium':'low'}</span><span class="pill">${fmt(v.occ/1e5,1)} lakh occasions / yr</span><span class="pill">basket ₹${fmt(v.basket)}</span><span class="pill">FY30 ${cr(l[2].by[s.id])}</span></h3>
+   <div class="score"><div class="bar2" aria-hidden="true"><i style="width:${x.sc}%"></i></div><div class="mini"><span>Size ${s.sc[0]}</span><span>Basket ${s.sc[1]}</span><span>Receptivity ${s.sc[2]}</span><span>Reach ${s.sc[3]}</span><span>Timing ${s.sc[4]}</span></div></div>
+   <dl><dt>Characteristics</dt><dd>${esc(s.ch)}</dd><dt>Occasion</dt><dd>${esc(s.occasion)}</dd><dt>Need</dt><dd>${esc(s.need)}</dd><dt>Line</dt><dd>${esc(s.line)}</dd><dt>First touch</dt><dd>${esc(s.touch)}</dd><dt>Who decides</dt><dd>${esc(s.decider)}</dd><dt>Why this score</dt><dd>${esc(s.why)}</dd><dt>Sizing proxy</dt><dd>${esc(s.occNote)} <i class="tag der">derived</i></dd></dl></div></article>`}).join('');
+}
+
+/* ---------- decision-makers ---------- */
+let jcur='dev';
+function mountJourneys(){
+  $('#jsel').innerHTML=Object.entries(JOURNEYS).map(([k,j])=>`<button class="chip" data-j="${k}" aria-pressed="${k===jcur}">${j.n}</button>`).join('');
+  $('#jsel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;jcur=b.dataset.j;[...$('#jsel').children].forEach(x=>x.setAttribute('aria-pressed',x===b));renderDmap()});
+  $('#stk').innerHTML='<tr><th>Stakeholder</th><th>Role in the decision</th><th>Marketing approach</th></tr>'+STK.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('');
+}
+function renderDmap(){
+  const j=JOURNEYS[jcur];const L=['none','some','strong influence','decides'];
+  let o=`<div class="hh"></div>`+STAGES.map(s=>`<div class="hh">${s}</div>`).join('');
+  STK.forEach((r,i)=>{o+=`<div class="hr">${esc(r[0])}</div>`+j.m[i].map((v,k)=>`<div class="mc ${v?'w'+(v+1):'r0'}" tabindex="0" data-tip="${esc(r[0])} at ${STAGES[k]}: ${L[v]}">${v||'·'}</div>`).join('')});
+  $('#dmap').style.gridTemplateColumns=`minmax(150px,1.8fr) repeat(${STAGES.length},minmax(58px,1fr))`;
+  $('#dmap').innerHTML=o;$('#jnote').textContent=j.note;
+}
+
+/* ---------- touchpoints ---------- */
+function renderTouch(){
+  let o=`<div class="hh"></div>`+TSEG.map(s=>`<div class="hh">${s}</div>`).join('');
+  TPS.forEach((t,i)=>{o+=`<div class="hr">${esc(t)}</div>`+TMAT[i].map((v,k)=>`<div class="mc ${v?'w'+(v+1):'r0'}" tabindex="0" data-tip="${esc(t)} for ${TSEG[k]}: ${['little','some','strong','decisive'][v]} influence">${v||'·'}</div>`).join('')});
+  $('#tmap').style.gridTemplateColumns=`minmax(160px,1.8fr) repeat(${TSEG.length},minmax(62px,1fr))`;
+  $('#tmap').innerHTML=o;
+  $('#tassets').innerHTML='<tr><th>Touchpoint</th><th>NuFlow asset</th><th>Owner or timing</th></tr>'+TASSETS.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('');
+}
+
+/* ---------- channels ---------- */
+function mountChWeights(){
+  $('#cw').innerHTML=CWCFG.map(c=>`<label class="sl" for="${c[0]}"><span>${c[1]}</span><input type="range" id="${c[0]}" min="0" max="50" step="5" value="${c[2]}"><output id="o_${c[0]}">${c[2]}</output></label>`).join('');
+  CWCFG.forEach(c=>$('#'+c[0]).addEventListener('input',e=>{CWV[c[0]]=+e.target.value;$('#o_'+c[0]).textContent=e.target.value;renderChannels()}));
+}
+function renderChannels(){
+  const tw=Object.values(CWV).reduce((a,b)=>a+b,0)||1,ks=Object.keys(CWV);
+  const rows=CHROWS.map(r=>({r,s:(r.sc.reduce((a,v,i)=>a+v*CWV[ks[i]],0)/tw)/5*100})).sort((a,b)=>b.s-a.s);
+  $('#chtab').innerHTML='<tr><th>#</th><th>Family</th><th>Channel</th><th class="n">Reach</th><th class="n">Margin</th><th class="n">Speed</th><th class="n">Cost</th><th class="n">Polymer</th><th class="n">Score</th><th>Note</th></tr>'+rows.map((x,i)=>`<tr><td class="n">${i+1}</td><td>${esc(x.r.g)}</td><td><b>${esc(x.r.n)}</b></td>${x.r.sc.map(v=>`<td class="n">${v}</td>`).join('')}<td class="n"><b>${fmt(x.s)}</b></td><td>${esc(x.r.note)}</td></tr>`).join('');
+}
+
+/* ---------- framework ---------- */
+function mountFw(){
+  $('#fw').innerHTML=FWCFG.map(c=>`<label class="sl" for="${c[0]}"><span>${c[1]}</span><input type="range" id="${c[0]}" min="0" max="40" step="1" value="${c[2]}"><output id="o_${c[0]}">${c[2]}</output></label>`).join('');
+  FWCFG.forEach(c=>$('#'+c[0]).addEventListener('input',e=>{FWV[c[0]]=+e.target.value;$('#o_'+c[0]).textContent=e.target.value;renderFw()}));
+}
+function renderFw(){
+  const tw=Object.values(FWV).reduce((a,b)=>a+b,0)||1,ks=Object.keys(FWV);
+  const rows=CLUSTERS.map(c=>({c,s:(c.sc.reduce((a,v,i)=>a+v*FWV[ks[i]],0)/tw)/5*100})).sort((a,b)=>b.s-a.s);
+  const ph=i=>i<1?'FY28':i<3?'FY29':i<5?'FY30':i<7?'FY31':'FY32+';
+  $('#ftab').innerHTML='<tr><th>#</th><th>Cluster</th><th class="n">Customers</th><th class="n">Geography</th><th class="n">Reach</th><th class="n">Presence</th><th class="n">Logistics</th><th class="n">Institutional</th><th class="n">Score</th><th>Implied phase</th><th>Evidence</th></tr>'+rows.map((x,i)=>`<tr><td class="n">${i+1}</td><td><b>${esc(x.c.n)}</b></td>${x.c.sc.map(v=>`<td class="n">${v}</td>`).join('')}<td class="n"><b>${fmt(x.s)}</b></td><td>${ph(i)}</td><td style="min-width:260px">${esc(x.c.ev)}</td></tr>`).join('');
+}
+
+/* ---------- global ---------- */
+function renderGlobal(){
+  const lmin=Math.log10(200),lmax=Math.log10(100000);
+  $('#ladder').innerHTML=LADDER.map(r=>{const w=(Math.log10(r[1])-lmin)/(lmax-lmin)*100;const nu=r[0].startsWith('NuFlow');
+    return `<div class="lr"><span style="${nu?'font-weight:700;color:var(--s3)':''}">${esc(r[0])}</span><i style="width:${w}%;background:${r[2]}" tabindex="0" data-tip="${esc(r[0])}: ₹${fmt(r[1])} MRP"></i><span class="lv">₹${fmt(r[1])}</span></div>`}).join('')+'<p style="font-size:11px;color:var(--muted);margin-top:6px">Log scale. Green rows are NuFlow MRPs from the plan.</p>';
+  $('#geos').innerHTML=GEOS.map(g=>`<div class="geo"><h3>${esc(g.n)}<span class="pill">${esc(g.ph)}</span></h3><dl class="kv">
+   <dt>Market</dt><dd>${esc(g.size)}</dd><dt>Price tiers</dt><dd>${esc(g.tiers)}</dd><dt>Polymer today</dt><dd>${esc(g.poly)}</dd><dt>Could move to</dt><dd>${esc(g.move)}</dd><dt>Receptive</dt><dd>${esc(g.seg)}</dd><dt>Certification</dt><dd>${esc(g.cert)}</dd><dt>Adaptation</dt><dd>${esc(g.adapt)}</dd></dl></div>`).join('');
+  $('#roadmap').innerHTML='<tr><th>When</th><th>Geography</th><th>Lead sub-categories</th><th>Compliance variant</th><th>Receptive segment</th><th>Gate to next step</th></tr>'+ROADMAP.map(r=>`<tr>${r.map((c,i)=>`<td>${i<2?'<b>'+esc(c)+'</b>':esc(c)}</td>`).join('')}</tr>`).join('');
+}
+
+/* ---------- numbers ---------- */
+const sl=(id,label,tag,min,max,step,val,fmtf)=>`<label class="sl" for="${id}"><span>${label}<i class="tag ${tag}">${TAGN[tag]}</i></span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"><output id="o_${id}">${fmtf(val)}</output></label>`;
+const SLD=[];
+function reg(id,get,set,f){SLD.push({id,get,set,f})}
+function mountNumbers(){
+  /* market */
+  reg('mkt',()=>S.market,v=>S.market=v,v=>'₹'+fmt(v)+' Cr');
+  $('#s-m').innerHTML=sl('mkt','India faucet demand, FY25','src',12000,30000,100,S.market,v=>'₹'+fmt(v)+' Cr')+
+   sl('gr','Occasion value growth a year (lifecycle model)','ass',0,15,0.5,S.g,v=>v+'%');
+  reg('gr',()=>S.g,v=>S.g=v,v=>v+'%');
+  /* shares */
+  let h='';DIMS.forEach(d=>{h+=`<h4 style="margin:10px 0 2px">${d.name}</h4>`;d.cats.forEach(c=>{const id='sh_'+d.k+'_'+c[0];h+=sl(id,c[1],c[5],0,100,1,S.share[d.k+'.'+c[0]],v=>v+'');reg(id,()=>S.share[d.k+'.'+c[0]],v=>S.share[d.k+'.'+c[0]]=v,v=>v+'')})});
+  $('#s-d').innerHTML=h;
+  h='';DIMS.forEach(d=>{h+=`<h4 style="margin:10px 0 2px">${d.name}</h4>`;d.cats.forEach(c=>{const id='rc_'+d.k+'_'+c[0];h+=sl(id,c[1],'ass',0,1,0.05,S.rec[d.k+'.'+c[0]],v=>fmt(v*100)+'%');reg(id,()=>S.rec[d.k+'.'+c[0]],v=>S.rec[d.k+'.'+c[0]]=v,v=>fmt(v*100)+'%')})});
+  $('#s-rc').innerHTML=h;
+  /* years */
+  h=sl('pen','Penetration of receptive occasions in the footprint','ass',0.2,5,0.05,S.pen,v=>fmt(v,2)+'%');reg('pen',()=>S.pen,v=>S.pen=v,v=>fmt(v,2)+'%');
+  [0,1,2,3,4].forEach(i=>{const id='fp_'+i;h+=sl(id,`Footprint share of India's occasions, FY${28+i}`,'ass',1,80,1,S.fp[i],v=>v+'%');reg(id,()=>S.fp[i],v=>S.fp[i]=v,v=>v+'%')});
+  $('#s-y').innerHTML=h;
+  /* segments */
+  h='';SEGS.forEach(s=>{const v=S.seg[s.id];h+=`<h4 style="margin:10px 0 2px">${esc(s.n)}</h4>`;
+    h+=sl('so_'+s.id,'Occasions a year (lakh)','der',0.1,80,0.1,v.occ/1e5,x=>fmt(x,1));reg('so_'+s.id,()=>S.seg[s.id].occ/1e5,x=>S.seg[s.id].occ=x*1e5,x=>fmt(x,1));
+    h+=sl('sb_'+s.id,'Basket per occasion','ass',500,80000,500,v.basket,x=>'₹'+fmt(x));reg('sb_'+s.id,()=>S.seg[s.id].basket,x=>S.seg[s.id].basket=x,x=>'₹'+fmt(x));
+    h+=sl('sr_'+s.id,'Receptivity multiplier','ass',0,1.5,0.05,v.rec,x=>fmt(x,2)+'×');reg('sr_'+s.id,()=>S.seg[s.id].rec,x=>S.seg[s.id].rec=x,x=>fmt(x,2)+'×')});
+  $('#s-s').innerHTML=h;
+  SLD.forEach(r=>{const el=document.getElementById(r.id);if(!el)return;el.addEventListener('input',()=>{r.set(parseFloat(el.value));
+    document.querySelectorAll('#presets .chip').forEach(b=>b.setAttribute('aria-pressed','false'));renderNumbers()})});
+  $('#presets').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const p=PRESETS[b.dataset.p];
+    S=JSON.parse(JSON.stringify(BASE));S.fp=[...p.fp];S.pen=p.pen;S.g=p.g;
+    if(p.recAdj){Object.keys(S.rec).forEach(k=>S.rec[k]=Math.max(0,Math.min(1,+(S.rec[k]+p.recAdj).toFixed(2))))}
+    [...$('#presets').children].forEach(x=>x.setAttribute('aria-pressed',x===b));renderNumbers()});
+}
+function syncSliders(){SLD.forEach(r=>{const el=document.getElementById(r.id);if(!el)return;const v=r.get();el.value=v;document.getElementById('o_'+r.id).textContent=r.f(v)})}
+function renderCubeChart(c){
+  const rows=[['Market',S.market,'var(--neutral)']];let run=S.market;
+  DIMS.forEach((d,i)=>{run*=c.f[i];rows.push(['× '+d.name+' ('+fmt(c.f[i]*100)+'%)',run,SCOL[i]])});
+  const W=560,lw=210,bw=W-lw-90,rh=34,max=S.market;
+  $('#cubechart').setAttribute('viewBox',`0 0 ${W} ${rows.length*rh+8}`);
+  $('#cubechart').innerHTML=rows.map((r,i)=>{const y=4+i*rh,w=Math.max(2,r[1]/max*bw);return `<text x="${lw-8}" y="${y+rh/2+2}" font-size="12" text-anchor="end" style="fill:var(--ink)">${esc(r[0])}</text><rect x="${lw}" y="${y+5}" width="${w}" height="${rh-12}" rx="3" fill="${r[2]}" tabindex="0" data-tip="${esc(r[0])}: ${cr(r[1])}"/><text class="m" x="${lw+w+6}" y="${y+rh/2+2}" font-size="11.5">${cr(r[1])}</text>`}).join('');
+  $('#cubetab').innerHTML='<tr><th>Dimension</th><th class="n">Weighted receptivity</th><th class="n">Running pool</th></tr>'+DIMS.map((d,i)=>`<tr><td>${d.name}</td><td class="n">${fmt(c.f[i]*100,1)}%</td><td class="n">${fmt(rows[i+1][1])}</td></tr>`).join('')+`<tr><td><b>Receptive pool</b></td><td class="n"><b>${fmt(c.prod*100,1)}%</b></td><td class="n"><b>${fmt(c.rec)}</b></td></tr>`;
+}
+function renderLrev(l){
+  const yrs=['FY28','FY29','FY30','FY31','FY32'];
+  const max=nice(Math.max(...l.map(y=>y.t),...PLAN_RETAIL.filter(v=>v!=null))*1.08),H=220,y0=250,x0=44,gw=96;
+  let o='';for(let i=0;i<=4;i++){const v=max/4*i,y=y0-v/max*H;o+=`<line x1="${x0}" x2="550" y1="${y}" y2="${y}" stroke="var(--line)"/><text class="m" x="${x0-6}" y="${y+4}" font-size="10.5" text-anchor="end">${fmt(v,max<4?1:0)}</text>`}
+  o+=`<text x="0" y="12" font-size="11">₹ Cr per year, retail channels</text>`;
+  yrs.forEach((yl,i)=>{const gx=x0+16+i*(gw+6),bw=44;let yy=y0;
+    SEGS.forEach((s,j)=>{const v=l[i].by[s.id],h=v/max*H;o+=`<rect x="${gx}" y="${yy-h}" width="${bw}" height="${Math.max(h-0.5,0)}" fill="${SCOL[j]}" tabindex="0" data-tip="${yl} ${esc(s.n)}: ${cr(v)}"/>`;yy-=h});
+    o+=`<text class="m" x="${gx+bw/2}" y="${yy-5}" font-size="11" text-anchor="middle" style="fill:var(--ink)">${l[i].t.toFixed(1)}</text>`;
+    if(PLAN_RETAIL[i]!=null){const ph=PLAN_RETAIL[i]/max*H,px=gx+bw+5;o+=`<rect x="${px}" y="${y0-ph}" width="${bw*0.75}" height="${ph}" rx="3" fill="var(--neutral)" tabindex="0" data-tip="${yl} plan retail (studios + BirlaNu dealers + D2C): ₹${PLAN_RETAIL[i]} Cr"/><text class="m" x="${px+bw*0.375}" y="${y0-ph-5}" font-size="10.5" text-anchor="middle">${PLAN_RETAIL[i].toFixed(1)}</text>`}
+    o+=`<text x="${gx+bw/2+(PLAN_RETAIL[i]!=null?18:0)}" y="270" font-size="12" text-anchor="middle" style="fill:var(--ink)">${yl}</text>`});
+  o+=`<line x1="${x0}" x2="550" y1="${y0}" y2="${y0}" stroke="var(--muted)"/>`;
+  $('#lrev').innerHTML=o;
+  $('#lrevleg').innerHTML=SEGS.map((s,j)=>`<span><i style="background:${SCOL[j]}"></i>${esc(s.n.split(' (')[0])}</span>`).join('')+'<span><i style="background:var(--neutral)"></i>Plan retail (Y1, Y5)</span>';
+  $('#lrt').innerHTML='<tr><th>Segment</th>'+yrs.map(y=>`<th class="n">${y}</th>`).join('')+'</tr>'+SEGS.map(s=>`<tr><td>${esc(s.n)}</td>${l.map(y=>`<td class="n">${fmt(y.by[s.id],2)}</td>`).join('')}</tr>`).join('')+
+   `<tr><td><b>Total</b></td>${l.map(y=>`<td class="n"><b>${fmt(y.t,2)}</b></td>`).join('')}</tr><tr><td>Plan retail</td>${PLAN_RETAIL.map(v=>`<td class="n">${v==null?'–':v}</td>`).join('')}</tr>`;
+}
+function renderNumbers(){
+  syncSliders();
+  const c=cube(S),l=life(S);
+  renderCubeChart(c);renderLrev(l);renderDims();renderCube();renderSegs();
+}
+
+/* ---------- evidence ---------- */
+let ef='all';
+function mountEvidence(){
+  const o=[['all','All'],['src','Sourced'],['der','Derived'],['ass','Assumed'],['unv','Unverified']];
+  $('#ef').innerHTML=o.map(x=>`<button class="chip" data-f="${x[0]}" aria-pressed="${x[0]==='all'}">${x[1]}</button>`).join('');
+  $('#ef').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ef=b.dataset.f;[...$('#ef').children].forEach(x=>x.setAttribute('aria-pressed',x===b));renderEvidence()});
+}
+function renderEvidence(){
+  $('#etab').innerHTML='<tr><th>Tag</th><th>Area</th><th>Fact</th><th>Source</th></tr>'+EV.filter(r=>ef==='all'||r[0]===ef).map(r=>`<tr><td><i class="tag ${r[0]}" style="margin:0">${TAGN[r[0]]}</i></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${r[4]==='#'?esc(r[3]):`<a href="${r[4]}" target="_blank" rel="noopener">${esc(r[3])}</a>`}</td></tr>`).join('');
+}
+
+/* ---------- boot ---------- */
+mountSlides();mountCube();mountLifeWeights();mountJourneys();mountChWeights();mountFw();mountNumbers();mountEvidence();
+renderAnswer();renderNumbers();renderDmap();renderTouch();renderChannels();renderFw();renderGlobal();renderEvidence();route();
+</script></body></html>
